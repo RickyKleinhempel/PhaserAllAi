@@ -39,29 +39,31 @@ export class FieldManager {
         
         // Vertical rotation around horizontal axis (X-axis)
         // Y-axis scaling for 3D flip effect from bottom to top
-        const scaleY = Math.cos(progress * Math.PI);
-        
-        // Only draw when field is actually visible (not completely sideways)
-        if (Math.abs(scaleY) > 0.02) {
+        const scaleY = Math.cos(progress * Math.PI);        // Only draw when field is actually visible (not completely sideways)
+        // Increased threshold to avoid rendering artifacts at very thin scales
+        if (Math.abs(scaleY) > 0.05) {
             // During first half of animation show old color
             // During second half show new color
             let currentColor;
             if (progress < 0.5) {
                 // First half: Old color (visible from bottom)
                 currentColor = field.fromColor === 0 ? 
-                    this.scene.colorManager.lightFieldColor : 
+                    this.scene.colorManager.lightFieldColor :
                     this.scene.colorManager.darkFieldColor;
             } else {
                 // Second half: New color (visible from top)
                 currentColor = field.toColor === 0 ? 
                     this.scene.colorManager.lightFieldColor : 
                     this.scene.colorManager.darkFieldColor;
-            }
-              // Apply Y-scaling for 3D effect
+            }            // Ensure we have a valid color - fallback to defaults if needed
+            if (!currentColor || currentColor === '') {
+                currentColor = field.fromColor === 0 ? '#ffffff' : '#000000';
+            }// Apply Y-scaling for 3D effect
             const actualScaleY = Math.abs(scaleY);
             
-            // Draw field with scaling effect
-            graphics.fillStyle(Phaser.Display.Color.HexStringToColor(currentColor).color);
+            // Use hex color directly - avoid Phaser color conversion issues
+            // The currentColor is already a valid hex string like '#ffffff'
+            graphics.fillStyle(currentColor);
             graphics.fillRect(
                 centerX - FIELD_SIZE / 2, 
                 centerY - (FIELD_SIZE / 2) * actualScaleY, 
