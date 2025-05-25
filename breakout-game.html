@@ -82,9 +82,70 @@
         .light-score {
             color: #333;
         }
-        
-        .dark-score {
+          .dark-score {
             color: #666;
+        }
+        
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+            font-size: 16px;
+        }
+        
+        .speed-slider {
+            width: 200px;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            cursor: pointer;
+        }
+        
+        .speed-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+        }
+          .speed-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .color-controls {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+            align-items: center;
+        }
+        
+        .color-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+        }
+        
+        .color-picker {
+            width: 50px;
+            height: 30px;
+            border: 2px solid #333;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 0;
+            outline: none;
+        }
+        
+        .color-picker:hover {
+            border-color: #4CAF50;
         }
     </style>
 </head>
@@ -97,8 +158,7 @@
         <button id="resetBtn">Reset</button>
     </div>
     
-    <canvas id="gameCanvas" width="1024" height="1024"></canvas>
-      <div class="score">
+    <canvas id="gameCanvas" width="1024" height="1024"></canvas>      <div class="score">
         <div class="score-item light-score">
             <div>Helle Felder</div>
             <div id="lightFields">512</div>
@@ -106,6 +166,21 @@
         <div class="score-item dark-score">
             <div>Dunkle Felder</div>
             <div id="darkFields">512</div>
+        </div>
+    </div>    <div class="speed-control">
+        <label for="speedSlider">Spielgeschwindigkeit:</label>
+        <input type="range" id="speedSlider" class="speed-slider" min="0.25" max="10" step="0.25" value="2">
+        <span id="speedValue">1.0x</span>
+    </div>
+
+    <div class="color-controls">
+        <div class="color-control">
+            <label for="lightColorPicker">Helle Felder:</label>
+            <input type="color" id="lightColorPicker" class="color-picker" value="#ffffff">
+        </div>
+        <div class="color-control">
+            <label for="darkColorPicker">Dunkle Felder:</label>
+            <input type="color" id="darkColorPicker" class="color-picker" value="#000000">
         </div>
     </div>
 
@@ -120,13 +195,17 @@
         const FIELDS_X = 32; // 32 Felder horizontal
         const FIELDS_Y = 32; // 32 Felder vertikal
         const BALL_RADIUS = 6;
-        const BALL_SPEED = 2;
-          // Spielzustand
+        const BALL_SPEED = 2;          // Spielzustand
         let gameRunning = false;
         let animationId = null;
-        
-        // Audio Context für Soundeffekte
+        let gameSpeed = 2.0; // Geschwindigkeitsmultiplikator
+        let lastFrameTime = 0; // Für FPS-Kontrolle
+          // Audio Context für Soundeffekte
         let audioContext = null;
+        
+        // Feldfarben
+        let lightFieldColor = '#ffffff';
+        let darkFieldColor = '#000000';
           // Partikeleffekte
         let particles = [];
         
@@ -134,14 +213,13 @@
         let gameField = [];
         
         // Animierte Felder für Dreheffekt
-        let animatedFields = [];
-          // Bälle
+        let animatedFields = [];        // Bälle
         let lightBall = {
             x: CANVAS_WIDTH * 0.75, // Startet auf der dunklen Seite
             y: CANVAS_HEIGHT / 2,
             dx: -BALL_SPEED,
             dy: BALL_SPEED,
-            color: '#ffffff',
+            type: 'light', // Identifikation über Typ statt Farbe
             trail: [] // Schweif-Positionen
         };
         
@@ -150,7 +228,7 @@
             y: CANVAS_HEIGHT / 2,
             dx: BALL_SPEED,
             dy: -BALL_SPEED,
-            color: '#000000',
+            type: 'dark', // Identifikation über Typ statt Farbe
             trail: [] // Schweif-Positionen
         };
         
@@ -225,16 +303,15 @@
                 duration: 40, // 40 Frames = 0.67 Sekunden bei 60fps (etwas länger für besseren Effekt)
                 currentFrame: 0
             });
-        }
-          // Partikel updaten und zeichnen
+        }        // Partikel updaten und zeichnen
         function updateAndDrawParticles() {
             for (let i = particles.length - 1; i >= 0; i--) {
                 const particle = particles[i];
                 
-                // Partikel bewegen
-                particle.x += particle.vx;
-                particle.y += particle.vy;
-                particle.life--;
+                // Partikel bewegen (mit Geschwindigkeitsmultiplikator)
+                particle.x += particle.vx * gameSpeed;
+                particle.y += particle.vy * gameSpeed;
+                particle.life -= gameSpeed;
                 
                 // Partikel entfernen wenn abgelaufen
                 if (particle.life <= 0) {
@@ -248,16 +325,33 @@
                 
                 ctx.save();
                 ctx.globalAlpha = alpha;
-                
-                // Farbübergang von alter zu neuer Farbe
+                  // Farbübergang von alter zu neuer Farbe
                 if (particle.fromColor === 0) {
-                    // Von weiß zu schwarz
-                    const grayValue = Math.floor(255 * (1 - progress));
-                    ctx.fillStyle = `rgb(${grayValue}, ${grayValue}, ${grayValue})`;
+                    // Von heller zu dunkler Farbe
+                    const r1 = parseInt(lightFieldColor.slice(1, 3), 16);
+                    const g1 = parseInt(lightFieldColor.slice(3, 5), 16);
+                    const b1 = parseInt(lightFieldColor.slice(5, 7), 16);
+                    const r2 = parseInt(darkFieldColor.slice(1, 3), 16);
+                    const g2 = parseInt(darkFieldColor.slice(3, 5), 16);
+                    const b2 = parseInt(darkFieldColor.slice(5, 7), 16);
+                    
+                    const r = Math.floor(r1 + (r2 - r1) * progress);
+                    const g = Math.floor(g1 + (g2 - g1) * progress);
+                    const b = Math.floor(b1 + (b2 - b1) * progress);
+                    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
                 } else {
-                    // Von schwarz zu weiß
-                    const grayValue = Math.floor(255 * progress);
-                    ctx.fillStyle = `rgb(${grayValue}, ${grayValue}, ${grayValue})`;
+                    // Von dunkler zu heller Farbe
+                    const r1 = parseInt(darkFieldColor.slice(1, 3), 16);
+                    const g1 = parseInt(darkFieldColor.slice(3, 5), 16);
+                    const b1 = parseInt(darkFieldColor.slice(5, 7), 16);
+                    const r2 = parseInt(lightFieldColor.slice(1, 3), 16);
+                    const g2 = parseInt(lightFieldColor.slice(3, 5), 16);
+                    const b2 = parseInt(lightFieldColor.slice(5, 7), 16);
+                    
+                    const r = Math.floor(r1 + (r2 - r1) * progress);
+                    const g = Math.floor(g1 + (g2 - g1) * progress);
+                    const b = Math.floor(b1 + (b2 - b1) * progress);
+                    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
                 }
                 
                 ctx.beginPath();
@@ -267,14 +361,13 @@
                 ctx.restore();
             }
         }
-        
-        // Animierte Felder updaten und zeichnen
+          // Animierte Felder updaten und zeichnen
         function updateAndDrawAnimatedFields() {
             for (let i = animatedFields.length - 1; i >= 0; i--) {
                 const field = animatedFields[i];
                 
-                // Animation updaten
-                field.currentFrame++;
+                // Animation updaten (mit Geschwindigkeitsmultiplikator)
+                field.currentFrame += gameSpeed;
                 const progress = field.currentFrame / field.duration;
                 field.rotation = progress * field.maxRotation;
                 
@@ -287,8 +380,7 @@
                 // Feld mit Dreheffekt zeichnen
                 drawRotatingField(field, progress);
             }
-        }
-          // Rotierendes Feld zeichnen
+        }        // Rotierendes Feld zeichnen
         function drawRotatingField(field, progress) {
             const fieldX = field.x * FIELD_SIZE;
             const fieldY = field.y * FIELD_SIZE;
@@ -302,28 +394,30 @@
             // Skalierung der Y-Achse für 3D-Flip-Effekt von unten nach oben
             const scaleY = Math.cos(progress * Math.PI);
             
-            // Während der ersten Hälfte der Animation zeigen wir die alte Farbe
-            // Während der zweiten Hälfte zeigen wir die neue Farbe
-            let currentColor;
-            if (progress < 0.5) {
-                // Erste Hälfte: Alte Farbe (von unten sichtbar)
-                currentColor = field.fromColor === 0 ? '#ffffff' : '#000000';
+            // Nur zeichnen wenn das Feld tatsächlich sichtbar ist (nicht komplett seitlich)
+            if (Math.abs(scaleY) > 0.02) {
+                // Während der ersten Hälfte der Animation zeigen wir die alte Farbe
+                // Während der zweiten Hälfte zeigen wir die neue Farbe
+                let currentColor;
+                if (progress < 0.5) {
+                    // Erste Hälfte: Alte Farbe (von unten sichtbar)
+                    currentColor = field.fromColor === 0 ? lightFieldColor : darkFieldColor;
+                } else {
+                    // Zweite Hälfte: Neue Farbe (von oben sichtbar)
+                    currentColor = field.toColor === 0 ? lightFieldColor : darkFieldColor;
+                }
+                
                 ctx.scale(1, Math.abs(scaleY));
-            } else {
-                // Zweite Hälfte: Neue Farbe (von oben sichtbar)
-                currentColor = field.toColor === 0 ? '#ffffff' : '#000000';
-                // Umkehrung der Skalierung für die "Rückseite"
-                ctx.scale(1, Math.abs(scaleY));
-            }
-            
-            // Feld zeichnen
-            ctx.fillStyle = currentColor;
-            ctx.fillRect(-FIELD_SIZE / 2, -FIELD_SIZE / 2, FIELD_SIZE, FIELD_SIZE);
-            
-            // Zusätzlicher visueller Effekt: Schatten/Gradient für mehr 3D-Gefühl
-            if (Math.abs(scaleY) < 0.3) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                
+                // Feld zeichnen ohne Hintergrund
+                ctx.fillStyle = currentColor;
                 ctx.fillRect(-FIELD_SIZE / 2, -FIELD_SIZE / 2, FIELD_SIZE, FIELD_SIZE);
+                
+                // Zusätzlicher visueller Effekt: Schatten/Gradient für mehr 3D-Gefühl
+                if (Math.abs(scaleY) < 0.3) {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                    ctx.fillRect(-FIELD_SIZE / 2, -FIELD_SIZE / 2, FIELD_SIZE, FIELD_SIZE);
+                }
             }
             
             ctx.restore();
@@ -366,19 +460,17 @@
                     if (!isAnimated) {
                         const fieldX = x * FIELD_SIZE;
                         const fieldY = y * FIELD_SIZE;
-                        
-                        if (gameField[y][x] === 0) {
-                            ctx.fillStyle = '#ffffff'; // Helles Feld
+                          if (gameField[y][x] === 0) {
+                            ctx.fillStyle = lightFieldColor; // Helles Feld
                         } else {
-                            ctx.fillStyle = '#000000'; // Dunkles Feld
+                            ctx.fillStyle = darkFieldColor; // Dunkles Feld
                         }
                         
                         ctx.fillRect(fieldX, fieldY, FIELD_SIZE, FIELD_SIZE);
                     }
                 }
             }
-        }
-          // Ball zeichnen
+        }        // Ball zeichnen
         function drawBall(ball) {
             // Schweif zeichnen
             for (let i = 0; i < ball.trail.length; i++) {
@@ -389,10 +481,18 @@
                 ctx.beginPath();
                 ctx.arc(pos.x, pos.y, radius, 0, 2 * Math.PI);
                 
-                if (ball.color === '#ffffff') {
-                    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                if (ball.type === 'light') {
+                    // Heller Ball - verwende helle Feldfarbe
+                    const r = parseInt(lightFieldColor.slice(1, 3), 16);
+                    const g = parseInt(lightFieldColor.slice(3, 5), 16);
+                    const b = parseInt(lightFieldColor.slice(5, 7), 16);
+                    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
                 } else {
-                    ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+                    // Dunkler Ball - verwende dunkle Feldfarbe
+                    const r = parseInt(darkFieldColor.slice(1, 3), 16);
+                    const g = parseInt(darkFieldColor.slice(3, 5), 16);
+                    const b = parseInt(darkFieldColor.slice(5, 7), 16);
+                    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
                 }
                 
                 ctx.fill();
@@ -401,10 +501,19 @@
             // Ball selbst zeichnen
             ctx.beginPath();
             ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, 2 * Math.PI);
-            ctx.fillStyle = ball.color;
+            
+            if (ball.type === 'light') {
+                // Heller Ball - verwende helle Feldfarbe
+                ctx.fillStyle = lightFieldColor;
+                ctx.strokeStyle = '#333333'; // Dunkler Rand für bessere Sichtbarkeit
+            } else {
+                // Dunkler Ball - verwende dunkle Feldfarbe
+                ctx.fillStyle = darkFieldColor;
+                ctx.strokeStyle = '#cccccc'; // Heller Rand für bessere Sichtbarkeit
+            }
+            
             ctx.fill();
-            ctx.strokeStyle = ball.color === '#ffffff' ? '#000000' : '#ffffff';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 2;
             ctx.stroke();
         }
         
@@ -437,20 +546,18 @@
             let collisionX = false;
             let collisionY = false;
             
-            for (let y = Math.max(0, topField); y <= Math.min(FIELDS_Y - 1, bottomField); y++) {
-                for (let x = Math.max(0, leftField); x <= Math.min(FIELDS_X - 1, rightField); x++) {
+            for (let y = Math.max(0, topField); y <= Math.min(FIELDS_Y - 1, bottomField); y++) {                for (let x = Math.max(0, leftField); x <= Math.min(FIELDS_X - 1, rightField); x++) {
                     const fieldType = gameField[y][x];
-                    const ballIsLight = ball.color === '#ffffff';
+                    const ballIsLight = ball.type === 'light';
                     
                     // Kollisionsrichtung bestimmen
                     const fieldCenterX = x * FIELD_SIZE + FIELD_SIZE / 2;
                     const fieldCenterY = y * FIELD_SIZE + FIELD_SIZE / 2;
                     
                     const deltaX = ball.x - fieldCenterX;
-                    const deltaY = ball.y - fieldCenterY;
-                      // RICHTIGE LOGIK:
-                    // Heller Ball (weiß): wandelt helle Felder (0) in dunkle um, kann über dunkle Felder (1) fahren
-                    // Dunkler Ball (schwarz): wandelt dunkle Felder (1) in helle um, kann über helle Felder (0) fahren
+                    const deltaY = ball.y - fieldCenterY;                    // RICHTIGE LOGIK:
+                    // Heller Ball (light): wandelt helle Felder (0) in dunkle um, kann über dunkle Felder (1) fahren
+                    // Dunkler Ball (dark): wandelt dunkle Felder (1) in helle um, kann über helle Felder (0) fahren
                     
                     if (ballIsLight) {
                         // Heller Ball
@@ -500,7 +607,7 @@
             
             return collisionX || collisionY;
         }        // Ball bewegen
-        function moveBall(ball) {
+        function moveBall(ball, speedMultiplier = 1.0) {
             // Aktuelle Position zum Schweif hinzufügen
             ball.trail.push({x: ball.x, y: ball.y});
             
@@ -510,15 +617,16 @@
                 ball.trail.shift(); // Älteste Position entfernen
             }
             
-            ball.x += ball.dx;
-            ball.y += ball.dy;
+            // Bewegung mit Geschwindigkeitsmultiplikator
+            ball.x += ball.dx * speedMultiplier;
+            ball.y += ball.dy * speedMultiplier;
             
             // Kollisionen prüfen
             checkWallCollision(ball);
             if (checkFieldCollision(ball)) {
                 updateFieldCounts();
             }
-        }          // Spiel rendern
+        }// Spiel rendern
         function render() {
             // Canvas leeren
             ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -536,26 +644,36 @@
             drawBall(lightBall);
             drawBall(darkBall);
         }
-        
-        // Game Loop
-        function gameLoop() {
+          // Game Loop
+        function gameLoop(currentTime) {
             if (!gameRunning) return;
             
-            // Bälle bewegen
-            moveBall(lightBall);
-            moveBall(darkBall);
+            // Berechne die Zeit seit dem letzten Frame
+            const deltaTime = currentTime - lastFrameTime;
             
-            // Rendern
-            render();
+            // FPS-Kontrolle basierend auf Spielgeschwindigkeit
+            // Standard: 60 FPS = 16.67ms pro Frame
+            const targetFrameTime = 16.67 / gameSpeed;
+            
+            if (deltaTime >= targetFrameTime) {
+                // Bälle bewegen (mit Geschwindigkeitsmultiplikator)
+                moveBall(lightBall, gameSpeed);
+                moveBall(darkBall, gameSpeed);
+                
+                // Rendern
+                render();
+                
+                lastFrameTime = currentTime;
+            }
             
             // Nächster Frame
             animationId = requestAnimationFrame(gameLoop);
-        }
-          // Spiel starten
+        }          // Spiel starten
         function startGame() {
             initAudio(); // Audio initialisieren
             gameRunning = true;
-            gameLoop();
+            lastFrameTime = performance.now(); // Startzeit setzen
+            gameLoop(lastFrameTime);
         }
         
         // Spiel pausieren
@@ -592,11 +710,30 @@
             // Rendern
             render();
         }
-        
-        // Event Listener
+          // Event Listener
         document.getElementById('startBtn').addEventListener('click', startGame);
         document.getElementById('pauseBtn').addEventListener('click', pauseGame);
         document.getElementById('resetBtn').addEventListener('click', resetGame);
+          // Geschwindigkeitsregler Event Listener
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValue = document.getElementById('speedValue');
+        
+        speedSlider.addEventListener('input', function() {
+            gameSpeed = parseFloat(this.value);
+            speedValue.textContent = gameSpeed.toFixed(2) + 'x';
+        });
+        
+        // Farbauswähler Event Listener
+        const lightColorPicker = document.getElementById('lightColorPicker');
+        const darkColorPicker = document.getElementById('darkColorPicker');
+        
+        lightColorPicker.addEventListener('input', function() {
+            lightFieldColor = this.value;
+        });
+        
+        darkColorPicker.addEventListener('input', function() {
+            darkFieldColor = this.value;
+        });
         
         // Spiel initialisieren
         initGameField();
