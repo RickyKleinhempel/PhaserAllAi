@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dual Ball Breakout - Phaser.js</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        #game-container {
+            border: 2px solid #333;
+            background-color: #ddd;
+            margin: 20px 0;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        #startBtn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        #startBtn:hover {
+            background-color: #45a049;
+        }
+        
+        #pauseBtn {
+            background-color: #ff9800;
+            color: white;
+        }
+        
+        #pauseBtn:hover {
+            background-color: #e68900;
+        }
+        
+        #resetBtn {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        #resetBtn:hover {
+            background-color: #da190b;
+        }
+        
+        .score {
+            display: flex;
+            gap: 40px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .score-item {
+            text-align: center;
+        }
+        
+        .light-score {
+            color: #333;
+        }
+        
+        .dark-score {
+            color: #666;
+        }
+        
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+            font-size: 16px;
+        }
+        
+        .speed-slider {
+            width: 200px;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            cursor: pointer;
+        }
+        
+        .speed-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+        }
+        
+        .speed-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .color-controls {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+            align-items: center;
+        }
+        
+        .color-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+        }
+        
+        .color-picker {
+            width: 50px;
+            height: 30px;
+            border: 2px solid #333;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 0;
+            outline: none;
+        }
+        
+        .color-picker:hover {
+            border-color: #4CAF50;
+        }
+        
+        .auto-color-btn {
+            background-color: #9C27B0;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .auto-color-btn:hover {
+            background-color: #7B1FA2;
+            transform: translateY(-1px);
+        }
+        
+        .auto-color-btn.active {
+            background-color: #E91E63;
+            box-shadow: 0 0 10px rgba(233, 30, 99, 0.5);
+        }
+        
+        .auto-color-btn.active:hover {
+            background-color: #C2185B;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dual Ball Breakout - Phaser.js Edition</h1>
+    
+    <div class="controls">
+        <button id="startBtn">Spiel starten</button>
+        <button id="pauseBtn">Pause</button>
+        <button id="resetBtn">Reset</button>
+    </div>
+    
+    <div id="game-container"></div>
+    
+    <div class="score">
+        <div class="score-item light-score">
+            <div>Helle Felder</div>
+            <div id="lightFields">512</div>
+        </div>
+        <div class="score-item dark-score">
+            <div>Dunkle Felder</div>
+            <div id="darkFields">512</div>
+        </div>
+    </div>
+    
+    <div class="speed-control">
+        <label for="speedSlider">Spielgeschwindigkeit:</label>
+        <input type="range" id="speedSlider" class="speed-slider" min="0.25" max="10" step="0.25" value="2">
+        <span id="speedValue">2.0x</span>
+    </div>
+    
+    <div class="color-controls">
+        <div class="color-control">
+            <label for="lightColorPicker">Helle Felder:</label>
+            <input type="color" id="lightColorPicker" class="color-picker" value="#ffffff">
+        </div>
+        <div class="color-control">
+            <label for="darkColorPicker">Dunkle Felder:</label>
+            <input type="color" id="darkColorPicker" class="color-picker" value="#000000">
+        </div>
+        <div class="color-control">
+            <button id="autoColorBtn" class="auto-color-btn">Auto-Farben: AUS</button>
+        </div>
+        <div class="color-control">
+            <button id="colorModeBtn" class="auto-color-btn">Standard</button>
+        </div>
+        <div class="color-control">
+            <label for="colorSpeedSlider">Animation:</label>
+            <input type="range" id="colorSpeedSlider" class="speed-slider" min="0.1" max="3" step="0.1" value="1" style="width: 100px;">
+            <span id="colorSpeedValue">1.0x</span>
+        </div>
+    </div>    <script type="module" src="src/main.js"></script>
+    <script src="debug-ball-disappearance.js"></script>
+</body>
+</html>

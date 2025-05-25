@@ -1,0 +1,17 @@
+{
+  "name": "phaser-dual-ball-breakout",
+  "version": "1.0.0",
+  "description": "Dual Ball Breakout game built with Phaser.js",
+  "main": "src/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "phaser": "^3.70.0"
+  }
+}
