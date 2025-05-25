@@ -70,9 +70,7 @@ export class Ball extends Phaser.GameObjects.Graphics {
         if (this.trail.length > maxTrailLength) {
             this.trail.shift();
         }
-    }
-
-    render() {
+    }    render() {
         this.clear();
         
         // Get current colors
@@ -86,11 +84,9 @@ export class Ball extends Phaser.GameObjects.Graphics {
             const radius = BALL_RADIUS * alpha;
             
             if (this.ballType === 'light') {
-                const color = Phaser.Display.Color.HexStringToColor(lightColor);
-                this.fillStyle(color.color, alpha);
+                this.fillStyle(lightColor, alpha);
             } else {
-                const color = Phaser.Display.Color.HexStringToColor(darkColor);
-                this.fillStyle(color.color, alpha);
+                this.fillStyle(darkColor, alpha);
             }
             
             this.fillCircle(pos.x - this.x, pos.y - this.y, radius);
@@ -103,11 +99,11 @@ export class Ball extends Phaser.GameObjects.Graphics {
         
         // Draw ball
         if (this.ballType === 'light') {
-            this.fillStyle(Phaser.Display.Color.HexStringToColor(lightColor).color);
-            this.lineStyle(2, Phaser.Display.Color.HexStringToColor('#333333').color);
+            this.fillStyle(lightColor);
+            this.lineStyle(2, '#333333');
         } else {
-            this.fillStyle(Phaser.Display.Color.HexStringToColor(darkColor).color);
-            this.lineStyle(2, Phaser.Display.Color.HexStringToColor('#cccccc').color);
+            this.fillStyle(darkColor);
+            this.lineStyle(2, '#cccccc');
         }
         
         this.fillCircle(0, 0, BALL_RADIUS);
@@ -117,8 +113,7 @@ export class Ball extends Phaser.GameObjects.Graphics {
         }
         if (this.powerupCharges > 0) {
             this.drawPowerupCharges();
-        }
-    }    drawSpeedGlow() {
+        }    }drawSpeedGlow() {
         // Create blue/cyan glow effect for speed
         const glowRadius = BALL_RADIUS + 8;
         const steps = 8;
@@ -127,16 +122,15 @@ export class Ball extends Phaser.GameObjects.Graphics {
             const alpha = 0.6 * (1 - i / steps);
             const radius = BALL_RADIUS + (i / steps) * 8;
             
-            this.fillStyle(Phaser.Display.Color.HexStringToColor('#00BFFF').color, alpha);
+            this.fillStyle('#00BFFF', alpha);
             this.fillCircle(0, 0, radius);
         }
-    }    drawSpeedIndicators() {
+    }drawSpeedIndicators() {
         // Draw speed lines to show acceleration
         // Use logarithmic scale for very high speeds to keep indicators manageable
         const displaySpeed = Math.log2(this.speedMultiplier); // 1x=0, 2x=1, 4x=2, 8x=3, etc.
         const speedLevel = Math.min(Math.floor(displaySpeed), 8); // Cap at 8 indicators (256x speed)
-        
-        for (let i = 0; i < speedLevel; i++) {
+          for (let i = 0; i < speedLevel; i++) {
             const angle = (i / 8) * Math.PI * 2;
             const distance = BALL_RADIUS + 10;
             const lineStartX = Math.cos(angle) * distance;
@@ -144,7 +138,7 @@ export class Ball extends Phaser.GameObjects.Graphics {
             const lineEndX = Math.cos(angle) * (distance + 6);
             const lineEndY = Math.sin(angle) * (distance + 6);
             
-            this.lineStyle(2, Phaser.Display.Color.HexStringToColor('#00BFFF').color);
+            this.lineStyle(2, '#00BFFF');
             this.lineBetween(lineStartX, lineStartY, lineEndX, lineEndY);
         }
         
@@ -180,9 +174,7 @@ export class Ball extends Phaser.GameObjects.Graphics {
         }
         this.setVelocity(dx, dy);
         this.render();
-    }
-
-    drawPowerupGlow() {
+    }    drawPowerupGlow() {
         // Create golden glow effect for powerup charges
         const glowRadius = BALL_RADIUS + 8;
         const steps = 8;
@@ -191,21 +183,20 @@ export class Ball extends Phaser.GameObjects.Graphics {
             const alpha = 0.6 * (1 - i / steps);
             const radius = BALL_RADIUS + (i / steps) * 8;
             
-            this.fillStyle(Phaser.Display.Color.HexStringToColor('#FFD700').color, alpha);
+            this.fillStyle('#FFD700', alpha);
             this.fillCircle(0, 0, radius);
         }
     }
 
-    drawPowerupCharges() {
-        // Draw charge indicators
+    drawPowerupCharges() {        // Draw charge indicators
         for (let i = 0; i < this.powerupCharges && i < 5; i++) {
             const angle = (i / 5) * Math.PI * 2;
             const distance = BALL_RADIUS + 12;
             const chargeX = Math.cos(angle) * distance;
             const chargeY = Math.sin(angle) * distance;
             
-            this.fillStyle(Phaser.Display.Color.HexStringToColor('#FFD700').color);
-            this.lineStyle(1, Phaser.Display.Color.HexStringToColor('#FFA500').color);
+            this.fillStyle('#FFD700');
+            this.lineStyle(1, '#FFA500');
             this.fillCircle(chargeX, chargeY, 3);
             this.strokeCircle(chargeX, chargeY, 3);
         }

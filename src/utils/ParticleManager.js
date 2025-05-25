@@ -40,14 +40,14 @@ export class ParticleManager {
                 const r = Math.floor(255 - progress * 100);
                 const g = Math.floor(215 - progress * 50);
                 const b = Math.floor(0 + progress * 100);
-                color = Phaser.Display.Color.GetColor(r, g, b);
-            } else if (particle.isSpark) {
+                color = Phaser.Display.Color.GetColor(r, g, b);            } else if (particle.isSpark) {
                 // Spark particles
                 if (particle.fromColor === 'white') {
                     const intensity = Math.floor(255 * (1 - progress * 0.5));
                     color = Phaser.Display.Color.GetColor(intensity, intensity, intensity);
                 } else {
-                    color = Phaser.Display.Color.HexStringToColor(particle.toColor).color;
+                    // Use direct hex color
+                    color = particle.toColor;
                 }
             } else {
                 // Normal conversion particles
@@ -58,13 +58,21 @@ export class ParticleManager {
                     this.scene.colorManager.lightFieldColor : 
                     this.scene.colorManager.darkFieldColor;
                 
-                const fromColor = Phaser.Display.Color.HexStringToColor(fromColorHex);
-                const toColor = Phaser.Display.Color.HexStringToColor(toColorHex);
+                // Helper function to convert hex to RGB
+                const hexToRgb = (hex) => {
+                    const r = parseInt(hex.slice(1, 3), 16);
+                    const g = parseInt(hex.slice(3, 5), 16);
+                    const b = parseInt(hex.slice(5, 7), 16);
+                    return { r, g, b };
+                };
+                
+                const fromColor = hexToRgb(fromColorHex);
+                const toColor = hexToRgb(toColorHex);
                 
                 // Interpolate between colors
-                const r = Math.floor(fromColor.red + (toColor.red - fromColor.red) * progress);
-                const g = Math.floor(fromColor.green + (toColor.green - fromColor.green) * progress);
-                const b = Math.floor(fromColor.blue + (toColor.blue - fromColor.blue) * progress);
+                const r = Math.floor(fromColor.r + (toColor.r - fromColor.r) * progress);
+                const g = Math.floor(fromColor.g + (toColor.g - fromColor.g) * progress);
+                const b = Math.floor(fromColor.b + (toColor.b - fromColor.b) * progress);
                 
                 color = Phaser.Display.Color.GetColor(r, g, b);
             }

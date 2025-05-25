@@ -41,6 +41,53 @@ export default class GameScene extends Phaser.Scene {
         this.fieldGraphics = this.add.graphics();
         this.particleGraphics = this.add.graphics();
         this.powerupGraphics = this.add.graphics();
+          // Create in-game field count displays
+        this.lightFieldText = this.add.text(50, 50, '512', {
+            fontSize: '32px',
+            fontFamily: 'Arial',
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 3,
+            shadow: {
+                offsetX: 2,
+                offsetY: 2,
+                color: '#000000',
+                blur: 3,
+                fill: true
+            }
+        });
+        
+        this.darkFieldText = this.add.text(CANVAS_WIDTH - 150, 50, '512', {
+            fontSize: '32px',
+            fontFamily: 'Arial',
+            fill: '#000000',
+            stroke: '#ffffff',
+            strokeThickness: 3,
+            shadow: {
+                offsetX: 2,
+                offsetY: 2,
+                color: '#ffffff',
+                blur: 3,
+                fill: true
+            }
+        });
+        
+        // Add labels for the field counts
+        this.lightFieldLabel = this.add.text(50, 20, 'Helle Felder:', {
+            fontSize: '18px',
+            fontFamily: 'Arial',
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
+        });
+        
+        this.darkFieldLabel = this.add.text(CANVAS_WIDTH - 150, 20, 'Dunkle Felder:', {
+            fontSize: '18px',
+            fontFamily: 'Arial',
+            fill: '#000000',
+            stroke: '#ffffff',
+            strokeThickness: 2
+        });
         
         // Create balls
         this.lightBall = new Ball(this, CANVAS_WIDTH * 0.75, CANVAS_HEIGHT / 2, 'light');
@@ -76,9 +123,7 @@ export default class GameScene extends Phaser.Scene {
         
         // Run diagnostics after a short delay
         setTimeout(() => this.runDiagnostics(), 1000);
-    }
-
-    update(time, delta) {
+    }    update(time, delta) {
         if (!this.gameRunning) return;
 
         // Calculate speed-adjusted delta
@@ -86,6 +131,9 @@ export default class GameScene extends Phaser.Scene {
         
         // Update automatic colors
         this.colorManager.update(adjustedDelta);
+        
+        // Update text colors if colors changed
+        this.updateTextColors();
         
         // Update balls
         this.lightBall.update(adjustedDelta);
@@ -113,9 +161,7 @@ export default class GameScene extends Phaser.Scene {
             }
         }
         this.updateFieldCounts();
-    }
-
-    updateFieldCounts() {
+    }    updateFieldCounts() {
         let lightCount = 0;
         let darkCount = 0;
         
@@ -126,8 +172,64 @@ export default class GameScene extends Phaser.Scene {
             }
         }
         
+        // Update HTML display
         document.getElementById('lightFields').textContent = lightCount;
         document.getElementById('darkFields').textContent = darkCount;
+        
+        // Update in-game display
+        if (this.lightFieldText) {
+            this.lightFieldText.setText(lightCount.toString());
+        }
+        if (this.darkFieldText) {
+            this.darkFieldText.setText(darkCount.toString());
+        }
+        
+        // Update text colors to match current field colors
+        this.updateTextColors();
+    }
+
+    updateTextColors() {
+        if (this.lightFieldText && this.darkFieldText && this.lightFieldLabel && this.darkFieldLabel) {
+            const lightColor = this.colorManager.lightFieldColor;
+            const darkColor = this.colorManager.darkFieldColor;
+            
+            // Update light field text and label
+            this.lightFieldText.setStyle({
+                fill: lightColor,
+                stroke: this.getContrastColor(lightColor),
+                strokeThickness: 3
+            });
+            this.lightFieldLabel.setStyle({
+                fill: lightColor,
+                stroke: this.getContrastColor(lightColor),
+                strokeThickness: 2
+            });
+            
+            // Update dark field text and label
+            this.darkFieldText.setStyle({
+                fill: darkColor,
+                stroke: this.getContrastColor(darkColor),
+                strokeThickness: 3
+            });
+            this.darkFieldLabel.setStyle({
+                fill: darkColor,
+                stroke: this.getContrastColor(darkColor),
+                strokeThickness: 2
+            });
+        }
+    }
+
+    getContrastColor(hexColor) {
+        // Convert hex to RGB
+        const r = parseInt(hexColor.slice(1, 3), 16);
+        const g = parseInt(hexColor.slice(3, 5), 16);
+        const b = parseInt(hexColor.slice(5, 7), 16);
+        
+        // Calculate luminance
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        
+        // Return black or white based on luminance
+        return luminance > 0.5 ? '#000000' : '#ffffff';
     }
 
     checkCollisions() {
@@ -291,9 +393,7 @@ export default class GameScene extends Phaser.Scene {
         // Update balls' visual representation
         this.lightBall.render();
         this.darkBall.render();
-    }
-
-    renderGameField() {
+    }    renderGameField() {
         for (let y = 0; y < FIELDS_Y; y++) {
             for (let x = 0; x < FIELDS_X; x++) {
                 // Skip animated fields
@@ -302,10 +402,11 @@ export default class GameScene extends Phaser.Scene {
                 const fieldX = x * FIELD_SIZE;
                 const fieldY = y * FIELD_SIZE;
                 
+                // Use hex color directly - avoid Phaser color conversion issues
                 if (this.gameField[y][x] === 0) {
-                    this.fieldGraphics.fillStyle(Phaser.Display.Color.HexStringToColor(this.colorManager.lightFieldColor).color);
+                    this.fieldGraphics.fillStyle(this.colorManager.lightFieldColor);
                 } else {
-                    this.fieldGraphics.fillStyle(Phaser.Display.Color.HexStringToColor(this.colorManager.darkFieldColor).color);
+                    this.fieldGraphics.fillStyle(this.colorManager.darkFieldColor);
                 }
                 
                 this.fieldGraphics.fillRect(fieldX, fieldY, FIELD_SIZE, FIELD_SIZE);

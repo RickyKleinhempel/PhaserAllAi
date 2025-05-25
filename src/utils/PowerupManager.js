@@ -73,19 +73,18 @@ export class PowerupManager {
     render(graphics) {
         for (const powerup of this.powerups) {
             if (powerup.collected) continue;
-            
-            // Draw outer glow
+              // Draw outer glow
             const glowSteps = 8;
             for (let i = 0; i < glowSteps; i++) {
                 const alpha = 0.8 * (1 - i / glowSteps);
                 const radius = powerup.size * (1 + i * 0.25);
-                graphics.fillStyle(Phaser.Display.Color.HexStringToColor('#FFD700').color, alpha * 0.4);
+                graphics.fillStyle('#FFD700', alpha * 0.4);
                 graphics.fillCircle(powerup.x, powerup.y, radius);
             }
             
             // Draw inner core
-            graphics.fillStyle(Phaser.Display.Color.HexStringToColor('#FFD700').color);
-            graphics.lineStyle(2, Phaser.Display.Color.HexStringToColor('#FFA500').color);
+            graphics.fillStyle('#FFD700');
+            graphics.lineStyle(2, '#FFA500');
             graphics.fillCircle(powerup.x, powerup.y, powerup.size);
             graphics.strokeCircle(powerup.x, powerup.y, powerup.size);
             
@@ -95,7 +94,7 @@ export class PowerupManager {
             // Draw sparkles
             for (const sparkle of powerup.sparkles) {
                 const alpha = sparkle.life / sparkle.maxLife;
-                graphics.fillStyle(Phaser.Display.Color.HexStringToColor('#FFD700').color, alpha);
+                graphics.fillStyle('#FFD700', alpha);
                 graphics.fillCircle(sparkle.x, sparkle.y, sparkle.size * alpha);
             }
         }
@@ -103,8 +102,7 @@ export class PowerupManager {
         const angle = Math.PI / points;
         
         // Create path for star
-        const path = [];
-        for (let i = 0; i < 2 * points; i++) {
+        const path = [];        for (let i = 0; i < 2 * points; i++) {
             const r = (i % 2 === 0) ? radius : radius * 0.5;
             const a = i * angle;
             const px = x + Math.cos(a) * r;
@@ -112,8 +110,8 @@ export class PowerupManager {
             path.push([px, py]);
         }
         
-        graphics.fillStyle(Phaser.Display.Color.HexStringToColor('#FF6B00').color);
-        graphics.lineStyle(1, Phaser.Display.Color.HexStringToColor('#FF4500').color);
+        graphics.fillStyle('#FF6B00');
+        graphics.lineStyle(1, '#FF4500');
         
         graphics.beginPath();
         graphics.moveTo(path[0][0], path[0][1]);
