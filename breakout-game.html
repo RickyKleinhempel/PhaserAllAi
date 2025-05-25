@@ -121,21 +121,26 @@
         const FIELDS_Y = 32; // 32 Felder vertikal
         const BALL_RADIUS = 3;
         const BALL_SPEED = 2;
-        
-        // Spielzustand
+          // Spielzustand
         let gameRunning = false;
         let animationId = null;
         
+        // Audio Context für Soundeffekte
+        let audioContext = null;
+        
+        // Partikeleffekte
+        let particles = [];
+        
         // Spielfeld - 0 = helles Feld, 1 = dunkles Feld
         let gameField = [];
-        
-        // Bälle
+          // Bälle
         let lightBall = {
             x: CANVAS_WIDTH * 0.75, // Startet auf der dunklen Seite
             y: CANVAS_HEIGHT / 2,
             dx: -BALL_SPEED,
             dy: BALL_SPEED,
-            color: '#ffffff'
+            color: '#ffffff',
+            trail: [] // Schweif-Positionen
         };
         
         let darkBall = {
@@ -143,10 +148,108 @@
             y: CANVAS_HEIGHT / 2,
             dx: BALL_SPEED,
             dy: -BALL_SPEED,
-            color: '#000000'
+            color: '#000000',
+            trail: [] // Schweif-Positionen
         };
         
-        // Spielfeld initialisieren
+        // Audio Context initialisieren
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+        
+        // Soundeffekt abspielen
+        function playConversionSound(isLightBall) {
+            if (!audioContext) return;
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            // Verschiedene Töne für helle und dunkle Bälle
+            if (isLightBall) {
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1);
+            } else {
+                oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.1);
+            }
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+        
+        // Partikel für Feldumwandlung erstellen
+        function createConversionParticles(x, y, fromColor, toColor) {
+            const centerX = x * FIELD_SIZE + FIELD_SIZE / 2;
+            const centerY = y * FIELD_SIZE + FIELD_SIZE / 2;
+            
+            // 8 Partikel pro Umwandlung
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const speed = 2 + Math.random() * 3;
+                
+                particles.push({
+                    x: centerX,
+                    y: centerY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1.0,
+                    maxLife: 30 + Math.random() * 20,
+                    fromColor: fromColor,
+                    toColor: toColor,
+                    size: 2 + Math.random() * 2
+                });
+            }
+        }
+        
+        // Partikel updaten und zeichnen
+        function updateAndDrawParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const particle = particles[i];
+                
+                // Partikel bewegen
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.life--;
+                
+                // Partikel entfernen wenn abgelaufen
+                if (particle.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+                
+                // Partikel zeichnen mit Farbübergang
+                const progress = 1 - (particle.life / particle.maxLife);
+                const alpha = Math.max(0, 1 - progress);
+                
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                
+                // Farbübergang von alter zu neuer Farbe
+                if (particle.fromColor === 0) {
+                    // Von weiß zu schwarz
+                    const grayValue = Math.floor(255 * (1 - progress));
+                    ctx.fillStyle = `rgb(${grayValue}, ${grayValue}, ${grayValue})`;
+                } else {
+                    // Von schwarz zu weiß
+                    const grayValue = Math.floor(255 * progress);
+                    ctx.fillStyle = `rgb(${grayValue}, ${grayValue}, ${grayValue})`;
+                }
+                
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size * alpha, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
         function initGameField() {
             gameField = [];
             for (let y = 0; y < FIELDS_Y; y++) {
@@ -192,9 +295,27 @@
                 }
             }
         }
-        
-        // Ball zeichnen
+          // Ball zeichnen
         function drawBall(ball) {
+            // Schweif zeichnen
+            for (let i = 0; i < ball.trail.length; i++) {
+                const pos = ball.trail[i];
+                const alpha = (i + 1) / ball.trail.length * 0.8; // Transparenz wird schwächer
+                const radius = BALL_RADIUS * alpha; // Radius wird kleiner
+                
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, radius, 0, 2 * Math.PI);
+                
+                if (ball.color === '#ffffff') {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                } else {
+                    ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+                }
+                
+                ctx.fill();
+            }
+            
+            // Ball selbst zeichnen
             ctx.beginPath();
             ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, 2 * Math.PI);
             ctx.fillStyle = ball.color;
@@ -248,12 +369,16 @@
                     // RICHTIGE LOGIK:
                     // Heller Ball (weiß): wandelt helle Felder (0) in dunkle um, kann über dunkle Felder (1) fahren
                     // Dunkler Ball (schwarz): wandelt dunkle Felder (1) in helle um, kann über helle Felder (0) fahren
-                    
-                    if (ballIsLight) {
+                      if (ballIsLight) {
                         // Heller Ball
                         if (fieldType === 0) {
                             // Helles Feld umwandeln
                             gameField[y][x] = 1;
+                            
+                            // Effekte hinzufügen
+                            playConversionSound(true);
+                            createConversionParticles(x, y, 0, 1);
+                            
                             // Ball prallt ab
                             if (Math.abs(deltaX) > Math.abs(deltaY)) {
                                 collisionX = true;
@@ -267,6 +392,11 @@
                         if (fieldType === 1) {
                             // Dunkles Feld umwandeln
                             gameField[y][x] = 0;
+                            
+                            // Effekte hinzufügen
+                            playConversionSound(false);
+                            createConversionParticles(x, y, 1, 0);
+                            
                             // Ball prallt ab
                             if (Math.abs(deltaX) > Math.abs(deltaY)) {
                                 collisionX = true;
@@ -284,10 +414,17 @@
             if (collisionY) ball.dy = -ball.dy;
             
             return collisionX || collisionY;
-        }
-        
-        // Ball bewegen
+        }        // Ball bewegen
         function moveBall(ball) {
+            // Aktuelle Position zum Schweif hinzufügen
+            ball.trail.push({x: ball.x, y: ball.y});
+            
+            // Schweif auf maximale Länge begrenzen
+            const maxTrailLength = 16;
+            if (ball.trail.length > maxTrailLength) {
+                ball.trail.shift(); // Älteste Position entfernen
+            }
+            
             ball.x += ball.dx;
             ball.y += ball.dy;
             
@@ -297,14 +434,16 @@
                 updateFieldCounts();
             }
         }
-        
-        // Spiel rendern
+          // Spiel rendern
         function render() {
             // Canvas leeren
             ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
             
             // Spielfeld zeichnen
             drawGameField();
+            
+            // Partikeleffekte zeichnen
+            updateAndDrawParticles();
             
             // Bälle zeichnen
             drawBall(lightBall);
@@ -325,9 +464,9 @@
             // Nächster Frame
             animationId = requestAnimationFrame(gameLoop);
         }
-        
-        // Spiel starten
+          // Spiel starten
         function startGame() {
+            initAudio(); // Audio initialisieren
             gameRunning = true;
             gameLoop();
         }
@@ -343,20 +482,23 @@
         // Spiel zurücksetzen
         function resetGame() {
             pauseGame();
-            
-            // Spielfeld zurücksetzen
+              // Spielfeld zurücksetzen
             initGameField();
             
-            // Bälle zurücksetzen
+            // Partikel zurücksetzen
+            particles = [];
+              // Bälle zurücksetzen
             lightBall.x = CANVAS_WIDTH * 0.75;
             lightBall.y = CANVAS_HEIGHT / 2;
             lightBall.dx = -BALL_SPEED;
             lightBall.dy = BALL_SPEED;
+            lightBall.trail = []; // Schweif zurücksetzen
             
             darkBall.x = CANVAS_WIDTH * 0.25;
             darkBall.y = CANVAS_HEIGHT / 2;
             darkBall.dx = BALL_SPEED;
             darkBall.dy = -BALL_SPEED;
+            darkBall.trail = []; // Schweif zurücksetzen
             
             // Rendern
             render();
