@@ -161,12 +161,70 @@ npm run build    # Production Build → dist/
 npm run preview  # Build-Vorschau
 ```
 
-## 📋 AI-Prompt
+## 📋 AI-Prompt für vollständige Spielentwicklung
 
-Der komplette AI-Prompt für die Neuerstellung dieses Projekts befindet sich in:
-`AIPrompt/complete-phaser-dual-ball-breakout-prompt.md`
+### Kompletter Entwicklungs-Prompt
+Der detaillierte AI-Prompt für die vollständige Neuerstellung dieses Projekts befindet sich unter:
+**`AIPrompt/complete-phaser-dual-ball-breakout-prompt.md`**
 
-Dieser Prompt kann von jedem AI-Agenten verwendet werden, um das gesamte Projekt von Grund auf zu rekonstruieren.
+### Was der Prompt enthält
+Dieser umfassende Prompt (490+ Zeilen) bietet eine **komplette Blaupause** für AI-Agenten:
+
+#### 🏗️ Technische Spezifikationen
+- **Vollständige Projektstruktur** mit allen erforderlichen Dateien
+- **Vite + Phaser.js Setup** mit Konfigurationsdateien
+- **Detaillierte Klassenarchitektur** für alle Game Objects und Manager
+- **Performance-Optimierungen** und Best Practices
+
+#### 🎮 Gameplay-Mechaniken
+- **Dual Ball System** mit typ-spezifischen Verhaltensweisen
+- **Progressive Geschwindigkeitssteigerung** (1x bis 256x)
+- **Erweiterte Powerup-Mechaniken** mit Explosionsradius
+- **Partikelsystem** mit 4 verschiedenen Effekttypen
+- **3D-Feld-Animationen** und visuelle Effekte
+
+#### 🔊 Audio-System-Integration
+- **Browser-konforme Audio-Implementierung** mit Aktivierungs-Button
+- **Web Audio API** mit prozeduraler Sound-Generierung
+- **AudioContext-Management** für moderne Browser-Policies
+- **Vollständige CSS & JavaScript** für Audio-Button
+
+#### 🖥️ UI/UX-Features
+- **Auto-Start-Funktionalität** ohne Benutzerinteraktion
+- **Vollbild-Support** mit Cross-Browser-Kompatibilität
+- **Responsive Design** für verschiedene Bildschirmgrößen
+- **Versteckte Steuerung** für immersive Spielerfahrung
+
+#### 📦 Deployment-Ready
+- **Produktions-Build-System** mit Vite
+- **Hosting-Anleitungen** für kostenlose Plattformen
+- **Git-Konfiguration** mit .gitignore
+- **Package.json** mit allen Dependencies
+
+### Verwendung des Prompts
+```markdown
+1. Kopiere den gesamten Prompt aus der Datei
+2. Füge ihn in einen AI-Chat ein (Claude, ChatGPT, etc.)
+3. Der AI-Agent erstellt das komplette Projekt automatisch
+4. Alle Dateien, Konfigurationen und Features werden generiert
+```
+
+### Prompt-Highlights
+- ✅ **490+ Zeilen** detaillierte Spezifikationen
+- ✅ **Vollständiger Code** für alle Komponenten
+- ✅ **Step-by-Step Implementierung** mit 10 Entwicklungsphasen
+- ✅ **Moderne Web-Standards** und Browser-Compliance
+- ✅ **Produktionsreife Architektur** mit Modularität
+- ✅ **Comprehensive Testing** und Validierung
+
+### AI-Agent Kompatibilität
+Der Prompt ist optimiert für:
+- **Claude (Anthropic)** - Empfohlen für komplexe Architektur
+- **ChatGPT (OpenAI)** - Gut für iterative Entwicklung
+- **GitHub Copilot** - Ideal für Code-Vervollständigung
+- **Andere AI-Coding-Assistenten** mit Phaser.js-Kenntnissen
+
+**💡 Tipp**: Verwende den Prompt in Kombination mit einem modernen AI-Agenten in einer VS Code-Umgebung für optimale Ergebnisse.
 
 ## 🤝 Entwicklung mit AI
 

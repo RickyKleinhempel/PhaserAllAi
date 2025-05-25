@@ -153,20 +153,34 @@ export const BALL_SPEED = 2;
 
 ## Audio System
 
-### Web Audio Implementation
+### Browser-Compliant Audio Implementation
 - **Technology**: Web Audio API with procedural generation
-- **Initialization**: First user interaction enables audio context
+- **Browser compliance**: Orange "🔊 Audio aktivieren" button for browser audio policies
+- **User activation**: Required user gesture to enable AudioContext
+- **Visual feedback**: Button changes to green "🔊 Audio aktiv" when activated
+- **Initialization**: Global `window.getAudioContext()` function for shared context
+- **AudioContext policy**: Resolves "AudioContext was not allowed to start" warnings
 - **Sound Types**:
   - Field conversion: Frequency sweeps (light: 800→400Hz, dark: 400→800Hz)
   - Powerup collection: Ascending tone (600→1200Hz)
   - Explosion: Dual oscillator (bass rumble + high crack)
 
+### Audio Button Implementation
+- **Position**: Fixed top-right corner (position: fixed; top: 10px; right: 10px)
+- **Design**: Orange background (#ff6600) with rounded corners (border-radius: 8px)
+- **Styling**: White text, bold font, hover effects, cursor pointer
+- **Active state**: Green background (#4CAF50) when audio is activated
+- **Accessibility**: Disabled state prevents multiple activations
+- **Z-index**: High z-index (1000) ensures button visibility over game elements
+
 ## User Interface
 
 ### Control System
-- **Buttons**: All control buttons hidden with CSS `display: none`
+- **Audio activation**: Orange "🔊 Audio aktivieren" button for browser compliance
+- **Audio button**: Fixed top-right position, changes to green when activated
+- **Buttons**: All game control buttons hidden with CSS `display: none`
 - **Auto-start**: Game begins automatically after 100ms delay via `this.time.delayedCall()`
-- **No user interaction**: Game starts immediately without requiring clicks
+- **No user interaction**: Game starts immediately without requiring clicks (except audio)
 - **Hidden UI elements**: Start button, reset button, all game controls
 - **Speed control**: 0.25x to 10x multiplier slider (hidden but functional)
 - **Score display**: Real-time field counters (visible)
@@ -296,6 +310,35 @@ export class GameScene extends Phaser.Scene {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dual Ball Breakout</title>
     <style>
+        /* Audio button styles */
+        #audioBtn {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 8px 12px;
+            background-color: #ff6600;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            z-index: 1000;
+            transition: background-color 0.3s;
+        }
+        
+        #audioBtn:hover {
+            background-color: #e55a00;
+        }
+        
+        #audioBtn.active {
+            background-color: #4CAF50;
+        }
+        
+        #audioBtn:disabled {
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+        
         /* Fullscreen styles */
         .fullscreen-container {
             position: fixed;
@@ -319,15 +362,38 @@ export class GameScene extends Phaser.Scene {
                 width: 100vw !important;
                 height: 100vh !important;
             }
-        }
-    </style>
+        }    </style>
 </head>
 <body>
+    <!-- Audio activation button -->
+    <button id="audioBtn">🔊 Audio aktivieren</button>
+    
     <div id="game-container"></div>
     <div id="fullscreen-container" class="fullscreen-container"></div>
     <div class="controls">
         <!-- All control buttons hidden -->
     </div>
+    
+    <script>
+        // Audio button functionality
+        document.getElementById('audioBtn').addEventListener('click', function() {
+            const button = this;
+            
+            // Initialize global AudioContext
+            window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Provide global access function
+            window.getAudioContext = function() {
+                return window.audioContext;
+            };
+            
+            // Update button appearance
+            button.textContent = '🔊 Audio aktiv';
+            button.classList.add('active');
+            button.disabled = true;
+        });
+    </script>
+    
     <script type="module" src="src/main.js"></script>
 </body>
 </html>
@@ -336,10 +402,11 @@ export class GameScene extends Phaser.Scene {
 ### Manager Classes
 
 #### AudioManager
-- Web Audio API implementation
-- Procedural sound generation
-- Multiple oscillator types
-- Volume and frequency control
+- Browser-compliant Web Audio API implementation
+- Global AudioContext management via `window.getAudioContext()`
+- Procedural sound generation with multiple oscillator types
+- Volume and frequency control with user-gesture activation
+- Handles "AudioContext was not allowed to start" browser warnings
 
 #### ColorManager
 - HSL/RGB conversion utilities
@@ -460,11 +527,13 @@ A complete, modern web game with:
 
 ### User Experience
 - ✅ Immediate gameplay (auto-start)
+- ✅ Browser-compliant audio activation
 - ✅ Intuitive visual feedback
 - ✅ Smooth animations (60 FPS)
 - ✅ Progressive difficulty through speed scaling
 - ✅ Strategic depth via powerup mechanics
 - ✅ Immersive fullscreen mode
+- ✅ Modern web standards compliance
 
 ## Implementation Notes
 
@@ -472,12 +541,13 @@ A complete, modern web game with:
 1. **Setup**: Initialize Vite project with Phaser.js dependencies
 2. **Core**: Implement basic dual ball mechanics with field collision
 3. **Effects**: Add visual particle system and audio integration
-4. **Powerups**: Integrate advanced powerup mechanics with explosions
-5. **Speed**: Implement progressive speed system (exponential doubling)
-6. **UI**: Add auto-start functionality and hide all controls
-7. **Fullscreen**: Implement cross-browser fullscreen support
-8. **Polish**: Optimize performance and validate all features
-9. **Deploy**: Build for production and deploy to hosting platform
+4. **Audio**: Implement browser-compliant audio button for AudioContext activation
+5. **Powerups**: Integrate advanced powerup mechanics with explosions
+6. **Speed**: Implement progressive speed system (exponential doubling)
+7. **UI**: Add auto-start functionality and hide all controls (except audio button)
+8. **Fullscreen**: Implement cross-browser fullscreen support
+9. **Polish**: Optimize performance and validate all features
+10. **Deploy**: Build for production and deploy to hosting platform
 
 ### Code Quality
 - **Architecture**: Clean separation of concerns
