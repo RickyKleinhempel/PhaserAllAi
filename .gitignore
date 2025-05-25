@@ -111,4 +111,4 @@ temp/
 *.local
 
 # Debug files (optional - uncomment if you don't want to track debug scripts)
-# debug-*.js
+debug-*.js
