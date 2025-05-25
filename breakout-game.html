@@ -242,31 +242,37 @@
         let autoColorMode = false;
         let colorAnimationTime = 0;
         let colorAnimationMode = 0; // 0: Standard, 1: Wellen, 2: Puls, 3: Regenbogen, 4: Kontrast
-        let colorAnimationSpeed = 1.0;
-          // Partikeleffekte
+        let colorAnimationSpeed = 1.0;        // Partikeleffekte
         let particles = [];
+        
+        // Powerup-System
+        let powerups = [];
+        let powerupSpawnTimer = 0;
+        let powerupSpawnInterval = 300; // Alle 5 Sekunden bei 60 FPS
         
         // Spielfeld - 0 = helles Feld, 1 = dunkles Feld
         let gameField = [];
+          // Animierte Felder für Dreheffekt
+        let animatedFields = [];
         
-        // Animierte Felder für Dreheffekt
-        let animatedFields = [];        // Bälle
+        // Bälle
         let lightBall = {
             x: CANVAS_WIDTH * 0.75, // Startet auf der dunklen Seite
             y: CANVAS_HEIGHT / 2,
             dx: -BALL_SPEED,
             dy: BALL_SPEED,
             type: 'light', // Identifikation über Typ statt Farbe
-            trail: [] // Schweif-Positionen
+            trail: [], // Schweif-Positionen
+            powerupCharges: 0 // Anzahl der Powerup-Ladungen
         };
-        
-        let darkBall = {
+          let darkBall = {
             x: CANVAS_WIDTH * 0.25, // Startet auf der hellen Seite
             y: CANVAS_HEIGHT / 2,
             dx: BALL_SPEED,
             dy: -BALL_SPEED,
             type: 'dark', // Identifikation über Typ statt Farbe
-            trail: [] // Schweif-Positionen
+            trail: [], // Schweif-Positionen
+            powerupCharges: 0 // Anzahl der Powerup-Ladungen
         };
         
         // Audio Context initialisieren
@@ -374,10 +380,367 @@
             // Neue Farben generieren
             lightFieldColor = hslToHex(lightHue, lightSaturation, lightLightness);
             darkFieldColor = hslToHex(darkHue, darkSaturation, darkLightness);
-            
-            // Color Picker aktualisieren
+              // Color Picker aktualisieren
             document.getElementById('lightColorPicker').value = lightFieldColor;
             document.getElementById('darkColorPicker').value = darkFieldColor;
+        }
+        
+        // Powerup spawnen
+        function spawnPowerup() {
+            // Zufällige Position auf dem Spielfeld
+            const x = Math.floor(Math.random() * FIELDS_X);
+            const y = Math.floor(Math.random() * FIELDS_Y);
+            
+            // Nur spawnen wenn das Feld nicht bereits ein Powerup hat
+            const existingPowerup = powerups.find(p => p.fieldX === x && p.fieldY === y);
+            if (existingPowerup) return;
+            
+            const centerX = x * FIELD_SIZE + FIELD_SIZE / 2;
+            const centerY = y * FIELD_SIZE + FIELD_SIZE / 2;
+            
+            powerups.push({
+                x: centerX,
+                y: centerY,
+                fieldX: x,
+                fieldY: y,
+                size: 8,
+                maxSize: 12,
+                pulseCycle: 0,
+                sparkles: [],
+                collected: false
+            });
+            
+            // Funken-Effekt um das neue Powerup
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const distance = 15 + Math.random() * 10;
+                
+                powerups[powerups.length - 1].sparkles.push({
+                    x: centerX + Math.cos(angle) * distance,
+                    y: centerY + Math.sin(angle) * distance,
+                    vx: Math.cos(angle) * 2,
+                    vy: Math.sin(angle) * 2,
+                    life: 30 + Math.random() * 20,
+                    maxLife: 30 + Math.random() * 20,
+                    size: 2 + Math.random() * 3
+                });
+            }
+        }
+        
+        // Powerups updaten und zeichnen
+        function updateAndDrawPowerups() {
+            powerupSpawnTimer += gameSpeed;
+            
+            // Neues Powerup spawnen
+            if (powerupSpawnTimer >= powerupSpawnInterval) {
+                spawnPowerup();
+                powerupSpawnTimer = 0;
+                // Zufälliges Intervall für nächstes Powerup (3-8 Sekunden)
+                powerupSpawnInterval = 180 + Math.random() * 300;
+            }
+            
+            // Powerups zeichnen und animieren
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                const powerup = powerups[i];
+                
+                if (powerup.collected) {
+                    powerups.splice(i, 1);
+                    continue;
+                }
+                
+                // Pulsanimation
+                powerup.pulseCycle += 0.15 * gameSpeed;
+                const pulseScale = 1 + Math.sin(powerup.pulseCycle) * 0.3;
+                powerup.size = 8 + pulseScale * 4;
+                
+                // Powerup zeichnen
+                ctx.save();
+                
+                // Äußerer Glow
+                const gradient = ctx.createRadialGradient(
+                    powerup.x, powerup.y, 0,
+                    powerup.x, powerup.y, powerup.size * 2
+                );
+                gradient.addColorStop(0, 'rgba(255, 215, 0, 0.8)');
+                gradient.addColorStop(0.7, 'rgba(255, 165, 0, 0.4)');
+                gradient.addColorStop(1, 'rgba(255, 165, 0, 0)');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(powerup.x, powerup.y, powerup.size * 2, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                // Innerer Kern
+                ctx.fillStyle = '#FFD700';
+                ctx.strokeStyle = '#FFA500';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(powerup.x, powerup.y, powerup.size, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Stern-Symbol im Powerup
+                ctx.fillStyle = '#FF6B00';
+                ctx.strokeStyle = '#FF4500';
+                ctx.lineWidth = 1;
+                drawStar(ctx, powerup.x, powerup.y, powerup.size * 0.6, 5);
+                
+                ctx.restore();
+                
+                // Funken updaten und zeichnen
+                for (let j = powerup.sparkles.length - 1; j >= 0; j--) {
+                    const sparkle = powerup.sparkles[j];
+                    
+                    sparkle.x += sparkle.vx * gameSpeed;
+                    sparkle.y += sparkle.vy * gameSpeed;
+                    sparkle.life -= gameSpeed;
+                    
+                    if (sparkle.life <= 0) {
+                        powerup.sparkles.splice(j, 1);
+                        continue;
+                    }
+                    
+                    const alpha = sparkle.life / sparkle.maxLife;
+                    ctx.save();
+                    ctx.globalAlpha = alpha;
+                    ctx.fillStyle = '#FFD700';
+                    ctx.beginPath();
+                    ctx.arc(sparkle.x, sparkle.y, sparkle.size * alpha, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.restore();
+                }
+                
+                // Neue Funken hinzufügen
+                if (Math.random() < 0.1) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = powerup.size;
+                    
+                    powerup.sparkles.push({
+                        x: powerup.x + Math.cos(angle) * distance,
+                        y: powerup.y + Math.sin(angle) * distance,
+                        vx: Math.cos(angle) * (1 + Math.random()),
+                        vy: Math.sin(angle) * (1 + Math.random()),
+                        life: 20 + Math.random() * 15,
+                        maxLife: 20 + Math.random() * 15,
+                        size: 1 + Math.random() * 2
+                    });
+                }
+            }
+        }
+        
+        // Stern zeichnen
+        function drawStar(ctx, x, y, radius, points) {
+            const angle = Math.PI / points;
+            ctx.beginPath();
+            for (let i = 0; i < 2 * points; i++) {
+                const r = (i % 2 === 0) ? radius : radius * 0.5;
+                const a = i * angle;
+                const px = x + Math.cos(a) * r;
+                const py = y + Math.sin(a) * r;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+        
+        // Powerup-Kollision prüfen
+        function checkPowerupCollision(ball) {
+            for (let i = 0; i < powerups.length; i++) {
+                const powerup = powerups[i];
+                if (powerup.collected) continue;
+                
+                const dx = ball.x - powerup.x;
+                const dy = ball.y - powerup.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < BALL_RADIUS + powerup.size) {
+                    // Powerup eingesammelt
+                    powerup.collected = true;
+                    ball.powerupCharges++;
+                    
+                    // Einsammel-Effekt
+                    playPowerupCollectSound();
+                    createPowerupCollectParticles(powerup.x, powerup.y);
+                    
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        // Powerup-Sound abspielen
+        function playPowerupCollectSound() {
+            if (!audioContext) return;
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            // Aufsteigender Ton für Powerup
+            oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.2);
+            
+            gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.2);
+        }
+        
+        // Powerup-Einsammel-Partikel
+        function createPowerupCollectParticles(x, y) {
+            for (let i = 0; i < 15; i++) {
+                const angle = (i / 15) * Math.PI * 2;
+                const speed = 3 + Math.random() * 5;
+                const maxLife = 40 + Math.random() * 30;
+                
+                particles.push({
+                    x: x + (Math.random() - 0.5) * 10,
+                    y: y + (Math.random() - 0.5) * 10,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: maxLife,
+                    maxLife: maxLife,
+                    fromColor: 'gold',
+                    toColor: 'orange',
+                    size: 4 + Math.random() * 3,
+                    initialSize: 4 + Math.random() * 3,
+                    decay: 0.95 + Math.random() * 0.03,
+                    isGolden: true
+                });
+            }
+        }
+        
+        // Explosions-Sound abspielen
+        function playExplosionSound() {
+            if (!audioContext) return;
+            
+            // Bassiger Explosions-Sound
+            const oscillator1 = audioContext.createOscillator();
+            const oscillator2 = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator1.connect(gainNode);
+            oscillator2.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            // Tiefer Rumpel-Ton
+            oscillator1.frequency.setValueAtTime(80, audioContext.currentTime);
+            oscillator1.frequency.exponentialRampToValueAtTime(20, audioContext.currentTime + 0.5);
+            oscillator1.type = 'sawtooth';
+            
+            // Höherer Knall
+            oscillator2.frequency.setValueAtTime(300, audioContext.currentTime);
+            oscillator2.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.3);
+            oscillator2.type = 'square';
+            
+            gainNode.gain.setValueAtTime(0.8, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator1.start();
+            oscillator2.start();
+            oscillator1.stop(audioContext.currentTime + 0.5);
+            oscillator2.stop(audioContext.currentTime + 0.3);
+        }
+        
+        // Powerup-Explosion
+        function triggerPowerupExplosion(ball, fieldX, fieldY) {
+            const explosionRadius = 3; // Radius in Feldern
+            const centerX = fieldX * FIELD_SIZE + FIELD_SIZE / 2;
+            const centerY = fieldY * FIELD_SIZE + FIELD_SIZE / 2;
+            
+            // Explosions-Sound
+            playExplosionSound();
+            
+            // Alle Felder im Radius umwandeln
+            let convertedFields = 0;
+            for (let dy = -explosionRadius; dy <= explosionRadius; dy++) {
+                for (let dx = -explosionRadius; dx <= explosionRadius; dx++) {
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance <= explosionRadius) {
+                        const targetX = fieldX + dx;
+                        const targetY = fieldY + dy;
+                        
+                        if (targetX >= 0 && targetX < FIELDS_X && targetY >= 0 && targetY < FIELDS_Y) {
+                            const currentField = gameField[targetY][targetX];
+                            const ballIsLight = ball.type === 'light';
+                            
+                            // Logik wie bei normaler Feldumwandlung
+                            if ((ballIsLight && currentField === 0) || (!ballIsLight && currentField === 1)) {
+                                const newFieldType = ballIsLight ? 1 : 0;
+                                gameField[targetY][targetX] = newFieldType;
+                                
+                                // Verzögerte Animation für Welleneffekt
+                                const delay = distance * 5; // Verzögerung basierend auf Entfernung
+                                setTimeout(() => {
+                                    createFieldAnimation(targetX, targetY, currentField, newFieldType);
+                                }, delay * (16.67 / gameSpeed)); // An Spielgeschwindigkeit anpassen
+                                
+                                convertedFields++;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Massive Explosions-Partikel
+            createExplosionParticles(centerX, centerY, ball.type === 'light');
+            
+            // Powerup-Ladung verbrauchen
+            ball.powerupCharges--;
+            
+            return convertedFields > 0;
+        }
+        
+        // Explosions-Partikel erstellen
+        function createExplosionParticles(x, y, isLightBall) {
+            // Viele Partikel für dramatischen Effekt
+            for (let i = 0; i < 50; i++) {
+                const angle = (i / 50) * Math.PI * 2 + Math.random() * 0.5;
+                const speed = 8 + Math.random() * 12;
+                const maxLife = 80 + Math.random() * 60;
+                
+                particles.push({
+                    x: x + (Math.random() - 0.5) * 20,
+                    y: y + (Math.random() - 0.5) * 20,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: maxLife,
+                    maxLife: maxLife,
+                    fromColor: isLightBall ? 0 : 1,
+                    toColor: isLightBall ? 1 : 0,
+                    size: 6 + Math.random() * 8,
+                    initialSize: 6 + Math.random() * 8,
+                    decay: 0.92 + Math.random() * 0.05,
+                    isExplosion: true
+                });
+            }
+            
+            // Zusätzliche Funken
+            for (let i = 0; i < 30; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 15 + Math.random() * 10;
+                const maxLife = 60 + Math.random() * 40;
+                
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: maxLife,
+                    maxLife: maxLife,
+                    fromColor: 'white',
+                    toColor: isLightBall ? 'yellow' : 'purple',
+                    size: 3 + Math.random() * 4,
+                    initialSize: 3 + Math.random() * 4,
+                    decay: 0.90 + Math.random() * 0.05,
+                    isSpark: true
+                });
+            }
         }// Partikel für Feldumwandlung erstellen
         function createConversionParticles(x, y, fromColor, toColor) {
             const centerX = x * FIELD_SIZE + FIELD_SIZE / 2;
@@ -446,9 +809,24 @@
                 
                 ctx.save();
                 ctx.globalAlpha = alpha;
-                
-                // Farbübergang von alter zu neuer Farbe
-                if (particle.fromColor === 0) {
+                  // Farbübergang von alter zu neuer Farbe
+                if (particle.isGolden) {
+                    // Goldene Powerup-Partikel
+                    const progress = 1 - (particle.life / particle.maxLife);
+                    const r = Math.floor(255 - progress * 100);
+                    const g = Math.floor(215 - progress * 50);
+                    const b = Math.floor(0 + progress * 100);
+                    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                } else if (particle.isSpark) {
+                    // Funken-Partikel
+                    const progress = 1 - (particle.life / particle.maxLife);
+                    if (typeof particle.fromColor === 'string') {
+                        if (particle.fromColor === 'white') {
+                            const intensity = Math.floor(255 * (1 - progress * 0.5));
+                            ctx.fillStyle = `rgb(${intensity}, ${intensity}, ${intensity})`;
+                        }
+                    }
+                } else if (particle.fromColor === 0) {
                     // Von heller zu dunkler Farbe
                     const r1 = parseInt(lightFieldColor.slice(1, 3), 16);
                     const g1 = parseInt(lightFieldColor.slice(3, 5), 16);
@@ -656,6 +1034,54 @@
             ctx.fill();
             ctx.lineWidth = 2;
             ctx.stroke();
+            
+            // Powerup-Ladungen anzeigen
+            if (ball.powerupCharges > 0) {
+                ctx.save();
+                
+                // Goldener Glow um den Ball wenn er Powerup-Ladungen hat
+                const glowGradient = ctx.createRadialGradient(
+                    ball.x, ball.y, BALL_RADIUS,
+                    ball.x, ball.y, BALL_RADIUS + 8
+                );
+                glowGradient.addColorStop(0, 'rgba(255, 215, 0, 0.6)');
+                glowGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+                
+                ctx.fillStyle = glowGradient;
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, BALL_RADIUS + 8, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                // Powerup-Ladungen als kleine goldene Punkte um den Ball
+                for (let i = 0; i < ball.powerupCharges && i < 5; i++) {
+                    const angle = (i / 5) * Math.PI * 2;
+                    const distance = BALL_RADIUS + 12;
+                    const chargeX = ball.x + Math.cos(angle) * distance;
+                    const chargeY = ball.y + Math.sin(angle) * distance;
+                    
+                    ctx.fillStyle = '#FFD700';
+                    ctx.strokeStyle = '#FFA500';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(chargeX, chargeY, 3, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.stroke();
+                }
+                
+                // Wenn mehr als 5 Ladungen, zeige Zahl in der Mitte des Balls
+                if (ball.powerupCharges > 5) {
+                    ctx.fillStyle = '#FFD700';
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 2;
+                    ctx.font = 'bold 12px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.strokeText(ball.powerupCharges.toString(), ball.x, ball.y);
+                    ctx.fillText(ball.powerupCharges.toString(), ball.x, ball.y);
+                }
+                
+                ctx.restore();
+            }
         }
         
         // Kollision mit Wänden prüfen
@@ -706,10 +1132,15 @@
                             // Helles Feld umwandeln
                             gameField[y][x] = 1;
                             
-                            // Effekte hinzufügen
-                            playConversionSound(true);
-                            createConversionParticles(x, y, 0, 1);
-                            createFieldAnimation(x, y, 0, 1);
+                            // Prüfen ob Ball Powerup-Ladungen hat für Explosion
+                            if (ball.powerupCharges > 0) {
+                                triggerPowerupExplosion(ball, x, y);
+                            } else {
+                                // Normale Effekte hinzufügen
+                                playConversionSound(true);
+                                createConversionParticles(x, y, 0, 1);
+                                createFieldAnimation(x, y, 0, 1);
+                            }
                             
                             // Ball prallt ab
                             if (Math.abs(deltaX) > Math.abs(deltaY)) {
@@ -725,10 +1156,15 @@
                             // Dunkles Feld umwandeln
                             gameField[y][x] = 0;
                             
-                            // Effekte hinzufügen
-                            playConversionSound(false);
-                            createConversionParticles(x, y, 1, 0);
-                            createFieldAnimation(x, y, 1, 0);
+                            // Prüfen ob Ball Powerup-Ladungen hat für Explosion
+                            if (ball.powerupCharges > 0) {
+                                triggerPowerupExplosion(ball, x, y);
+                            } else {
+                                // Normale Effekte hinzufügen
+                                playConversionSound(false);
+                                createConversionParticles(x, y, 1, 0);
+                                createFieldAnimation(x, y, 1, 0);
+                            }
                             
                             // Ball prallt ab
                             if (Math.abs(deltaX) > Math.abs(deltaY)) {
@@ -764,10 +1200,14 @@
             
             // Kollisionen prüfen
             checkWallCollision(ball);
+            
+            // Powerup-Kollision prüfen
+            checkPowerupCollision(ball);
+            
             if (checkFieldCollision(ball)) {
                 updateFieldCounts();
             }
-        }// Spiel rendern
+        }        // Spiel rendern
         function render() {
             // Canvas leeren
             ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -780,6 +1220,9 @@
             
             // Partikeleffekte zeichnen
             updateAndDrawParticles();
+            
+            // Powerups zeichnen
+            updateAndDrawPowerups();
             
             // Bälle zeichnen
             drawBall(lightBall);
@@ -826,10 +1269,11 @@
                 cancelAnimationFrame(animationId);
             }
         }
-        
-        // Spiel zurücksetzen
+          // Spiel zurücksetzen
         function resetGame() {
-            pauseGame();            // Spielfeld zurücksetzen
+            pauseGame();
+            
+            // Spielfeld zurücksetzen
             initGameField();
             
             // Partikel zurücksetzen
@@ -837,18 +1281,25 @@
             
             // Animierte Felder zurücksetzen
             animatedFields = [];
-              // Bälle zurücksetzen
+            
+            // Powerups zurücksetzen
+            powerups = [];
+            powerupSpawnTimer = 0;
+            
+            // Bälle zurücksetzen
             lightBall.x = CANVAS_WIDTH * 0.75;
             lightBall.y = CANVAS_HEIGHT / 2;
             lightBall.dx = -BALL_SPEED;
             lightBall.dy = BALL_SPEED;
             lightBall.trail = []; // Schweif zurücksetzen
+            lightBall.powerupCharges = 0; // Powerup-Ladungen zurücksetzen
             
             darkBall.x = CANVAS_WIDTH * 0.25;
             darkBall.y = CANVAS_HEIGHT / 2;
             darkBall.dx = BALL_SPEED;
             darkBall.dy = -BALL_SPEED;
             darkBall.trail = []; // Schweif zurücksetzen
+            darkBall.powerupCharges = 0; // Powerup-Ladungen zurücksetzen
             
             // Rendern
             render();
