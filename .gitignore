@@ -5,9 +5,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Build outputs
-dist/
-build/
+# Build outputs (commented out for GitHub Pages deployment)
+# dist/
+# build/
 out/
 
 # Development
