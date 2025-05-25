@@ -7,37 +7,48 @@
     <style>
         body {
             margin: 0;
-            padding: 20px;
+            padding: 10px;
             font-family: Arial, sans-serif;
             background-color: #f0f0f0;
             display: flex;
             flex-direction: column;
             align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
         }
         
         h1 {
             color: #333;
             margin-bottom: 20px;
+            text-align: center;
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            padding: 0 10px;
         }
         
         #game-container {
             border: 2px solid #333;
             background-color: #ddd;
             margin: 20px 0;
+            width: 1024px;
+            height: 1024px;
         }
-          .controls {
+        .controls {
             display: none; /* Hide all control buttons */
             gap: 10px;
             margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 0 10px;
         }
         
         button {
-            padding: 10px 20px;
-            font-size: 16px;
+            padding: clamp(8px, 2vw, 12px) clamp(16px, 4vw, 24px);
+            font-size: clamp(14px, 3vw, 18px);
             border: none;
             border-radius: 5px;
             cursor: pointer;
             transition: background-color 0.3s;
+            white-space: nowrap;
         }
         
         #startBtn {
@@ -140,9 +151,13 @@
         
         .score {
             display: flex;
-            gap: 40px;
-            font-size: 18px;
+            gap: clamp(20px, 5vw, 40px);
+            font-size: clamp(16px, 3vw, 20px);
             font-weight: bold;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px 0;
+            padding: 0 10px;
         }
         
         .score-item {
@@ -162,11 +177,14 @@
             align-items: center;
             gap: 10px;
             margin-top: 20px;
-            font-size: 16px;
+            font-size: clamp(14px, 3vw, 18px);
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 0 10px;
         }
         
         .speed-slider {
-            width: 200px;
+            width: clamp(150px, 30vw, 250px);
             height: 6px;
             border-radius: 3px;
             background: #ddd;
@@ -194,21 +212,26 @@
         
         .color-controls {
             display: flex;
-            gap: 30px;
+            gap: clamp(15px, 4vw, 30px);
             margin-top: 20px;
             align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 0 10px;
         }
         
         .color-control {
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-size: 16px;
+            gap: 8px;
+            font-size: clamp(14px, 3vw, 18px);
+            flex-wrap: wrap;
+            justify-content: center;
         }
         
         .color-picker {
-            width: 50px;
-            height: 30px;
+            width: clamp(40px, 8vw, 60px);
+            height: clamp(25px, 5vw, 35px);
             border: 2px solid #333;
             border-radius: 5px;
             cursor: pointer;
@@ -224,12 +247,13 @@
             background-color: #9C27B0;
             color: white;
             border: none;
-            padding: 8px 16px;
+            padding: clamp(6px, 1.5vw, 10px) clamp(12px, 3vw, 18px);
             border-radius: 5px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: clamp(12px, 2.5vw, 16px);
             font-weight: bold;
             transition: all 0.3s ease;
+            white-space: nowrap;
         }
         
         .auto-color-btn:hover {
@@ -249,14 +273,14 @@
         /* Audio Button Styles */
         #audioBtn {
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: clamp(10px, 2vw, 20px);
+            right: clamp(10px, 2vw, 20px);
             background-color: #FF9800;
             color: white;
             border: none;
-            padding: 12px 24px;
+            padding: clamp(8px, 2vw, 12px) clamp(16px, 3vw, 24px);
             border-radius: 8px;
-            font-size: 16px;
+            font-size: clamp(12px, 2.5vw, 16px);
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
@@ -277,6 +301,108 @@
         #audioBtn.enabled:hover {
             background-color: #45a049;
         }
+
+        /* Settings Expander Styles */
+        .settings-expander {
+            margin: 20px 0;
+            border: 2px solid #333;
+            border-radius: 8px;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+            max-width: 1024px;
+            width: 100%;
+        }
+
+        .settings-header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            user-select: none;
+        }
+
+        .settings-header:hover {
+            background-color: #45a049;
+        }
+
+        .settings-header .expand-icon {
+            font-size: 18px;
+            transition: transform 0.3s ease;
+        }
+
+        .settings-expander.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .settings-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            background-color: #f9f9f9;
+        }
+
+        .settings-expander.expanded .settings-content {
+            max-height: 500px;
+        }
+
+        .settings-inner {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Responsive Design Media Queries */
+        
+        /* Small screens - scale down the game container */
+        @media (max-width: 1200px) {
+            #game-container {
+                width: 800px;
+                height: 800px;
+            }
+        }
+        
+        @media (max-width: 900px) {
+            #game-container {
+                width: 600px;
+                height: 600px;
+            }
+        }
+        
+        @media (max-width: 700px) {
+            #game-container {
+                width: 500px;
+                height: 500px;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            #game-container {
+                width: 400px;
+                height: 400px;
+            }
+        }
+        
+        @media (max-width: 500px) {
+            #game-container {
+                width: 350px;
+                height: 350px;
+            }
+        }
+        
+        @media (max-width: 400px) {
+            #game-container {
+                width: 300px;
+                height: 300px;
+            }
+        }
     </style>
   <script type="module" crossorigin src="./assets/index-F-seKgT6.js"></script>
 </head>
@@ -292,6 +418,45 @@
         <button id="fullscreenBtn">Vollbild</button>
     </div>
     
+    <!-- Settings Expander -->
+    <div class="settings-expander" id="settingsExpander">
+        <div class="settings-header" onclick="toggleSettings()">
+            <span>⚙️ Spieleinstellungen</span>
+            <span class="expand-icon">▼</span>
+        </div>
+        <div class="settings-content">
+            <div class="settings-inner">
+                <div class="speed-control">
+                    <label for="speedSlider">Spielgeschwindigkeit:</label>
+                    <input type="range" id="speedSlider" class="speed-slider" min="0.25" max="10" step="0.25" value="2">
+                    <span id="speedValue">2.0x</span>
+                </div>
+                
+                <div class="color-controls">
+                    <div class="color-control">
+                        <label for="lightColorPicker">Helle Felder:</label>
+                        <input type="color" id="lightColorPicker" class="color-picker" value="#ffffff">
+                    </div>
+                    <div class="color-control">
+                        <label for="darkColorPicker">Dunkle Felder:</label>
+                        <input type="color" id="darkColorPicker" class="color-picker" value="#000000">
+                    </div>
+                    <div class="color-control">
+                        <button id="autoColorBtn" class="auto-color-btn">Auto-Farben: AUS</button>
+                    </div>
+                    <div class="color-control">
+                        <button id="colorModeBtn" class="auto-color-btn">Standard</button>
+                    </div>
+                    <div class="color-control">
+                        <label for="colorSpeedSlider">Animation:</label>
+                        <input type="range" id="colorSpeedSlider" class="speed-slider" min="0.1" max="3" step="0.1" value="1" style="width: clamp(80px, 15vw, 120px);">
+                        <span id="colorSpeedValue">1.0x</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div id="game-container"></div>
     
     <div class="score">
@@ -303,34 +468,7 @@
             <div>Dunkle Felder</div>
             <div id="darkFields">512</div>
         </div>
-    </div>
-    
-    <div class="speed-control">
-        <label for="speedSlider">Spielgeschwindigkeit:</label>
-        <input type="range" id="speedSlider" class="speed-slider" min="0.25" max="10" step="0.25" value="2">
-        <span id="speedValue">2.0x</span>
-    </div>
-    
-    <div class="color-controls">
-        <div class="color-control">
-            <label for="lightColorPicker">Helle Felder:</label>
-            <input type="color" id="lightColorPicker" class="color-picker" value="#ffffff">
-        </div>
-        <div class="color-control">
-            <label for="darkColorPicker">Dunkle Felder:</label>
-            <input type="color" id="darkColorPicker" class="color-picker" value="#000000">
-        </div>
-        <div class="color-control">
-            <button id="autoColorBtn" class="auto-color-btn">Auto-Farben: AUS</button>
-        </div>
-        <div class="color-control">
-            <button id="colorModeBtn" class="auto-color-btn">Standard</button>
-        </div>
-        <div class="color-control">
-            <label for="colorSpeedSlider">Animation:</label>
-            <input type="range" id="colorSpeedSlider" class="speed-slider" min="0.1" max="3" step="0.1" value="1" style="width: 100px;">
-            <span id="colorSpeedValue">1.0x</span>
-        </div>    </div>    
+    </div>    
 
     <script>
         // Audio Button Handler
@@ -389,6 +527,20 @@
         window.getAudioContext = function() {
             return audioInitialized ? audioContext : null;
         };
+
+        // Settings expander functionality
+        function toggleSettings() {
+            const expander = document.getElementById('settingsExpander');
+            expander.classList.toggle('expanded');
+        }
+
+        // Initialize settings expander (closed by default)
+        document.addEventListener('DOMContentLoaded', function() {
+            const expander = document.getElementById('settingsExpander');
+            if (expander) {
+                expander.classList.remove('expanded');
+            }
+        });
     </script>
 
 </body>

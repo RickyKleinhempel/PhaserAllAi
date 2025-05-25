@@ -36,14 +36,13 @@ export default class GameScene extends Phaser.Scene {
         
         // Initialize game field
         this.initGameField();
-    }
-
-    create() {
+    }    create() {
         // Create graphics objects
         this.fieldGraphics = this.add.graphics();
         this.particleGraphics = this.add.graphics();
         this.powerupGraphics = this.add.graphics();
-          // Create balls
+        
+        // Create balls
         this.lightBall = new Ball(this, CANVAS_WIDTH * 0.75, CANVAS_HEIGHT / 2, 'light');
         this.darkBall = new Ball(this, CANVAS_WIDTH * 0.25, CANVAS_HEIGHT / 2, 'dark');
         
@@ -55,16 +54,22 @@ export default class GameScene extends Phaser.Scene {
         this.input.once('pointerdown', () => {
             this.audioManager.init();
         });
-          // Set up UI event listeners
+        
+        // Set up UI event listeners
         this.setupUIListeners();
-          // Initial render
+        
+        // Set up resize handling
+        this.setupResizeHandling();
+        
+        // Initial render
         this.render();
         
         // Auto-start the game immediately
         this.time.delayedCall(100, () => {
             this.startGame();
         });
-          console.log('GameScene created successfully - Auto-starting game');
+        
+        console.log('GameScene created successfully - Auto-starting game');
         console.log('Light ball position:', this.lightBall.x, this.lightBall.y);
         console.log('Dark ball position:', this.darkBall.x, this.darkBall.y);
         console.log('Field counts - Light:', this.countFields(0), 'Dark:', this.countFields(1));
@@ -458,5 +463,23 @@ export default class GameScene extends Phaser.Scene {
         console.log('Powerups:', this.powerupManager.powerups.length);
         console.log('Particles:', this.particleManager.particles.length);
         console.log('=== END DIAGNOSTICS ===');
+    }
+
+    setupResizeHandling() {
+        // Listen for scale manager resize events
+        this.scale.on('resize', this.handleResize, this);
+    }
+
+    handleResize(gameSize, baseSize, displaySize, previousWidth, previousHeight) {
+        // Get the new dimensions
+        const { width, height } = gameSize;
+        
+        // Update camera viewport
+        this.cameras.main.setViewport(0, 0, width, height);
+        
+        // Re-render everything to fit new size
+        this.render();
+        
+        console.log('Game resized to:', width, 'x', height);
     }
 }
