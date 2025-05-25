@@ -245,10 +245,45 @@
         .auto-color-btn.active:hover {
             background-color: #C2185B;
         }
+        
+        /* Audio Button Styles */
+        #audioBtn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #FF9800;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        #audioBtn:hover {
+            background-color: #F57C00;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+        
+        #audioBtn.enabled {
+            background-color: #4CAF50;
+        }
+        
+        #audioBtn.enabled:hover {
+            background-color: #45a049;
+        }
     </style>
-  <script type="module" crossorigin src="./assets/index-DokDT20Y.js"></script>
+  <script type="module" crossorigin src="./assets/index-F-seKgT6.js"></script>
 </head>
 <body>
+    <!-- Audio Activation Button -->
+    <button id="audioBtn">🔊 Audio aktivieren</button>
+    
     <h1>Dual Ball Breakout - Phaser.js Edition</h1>
       <div class="controls">
         <button id="startBtn">Spiel starten</button>
@@ -295,6 +330,66 @@
             <label for="colorSpeedSlider">Animation:</label>
             <input type="range" id="colorSpeedSlider" class="speed-slider" min="0.1" max="3" step="0.1" value="1" style="width: 100px;">
             <span id="colorSpeedValue">1.0x</span>
-        </div>    </div>    
+        </div>    </div>    
+
+    <script>
+        // Audio Button Handler
+        let audioContext = null;
+        let audioInitialized = false;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const audioBtn = document.getElementById('audioBtn');
+            
+            if (audioBtn) {
+                audioBtn.addEventListener('click', async function() {
+                    try {
+                        if (!audioContext) {
+                            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        }
+                        
+                        if (audioContext.state === 'suspended') {
+                            await audioContext.resume();
+                        }
+                        
+                        audioInitialized = true;
+                        
+                        // Update button
+                        audioBtn.textContent = '🔊 Audio aktiv';
+                        audioBtn.classList.add('enabled');
+                        audioBtn.disabled = true;
+                        
+                        // Play a short confirmation sound
+                        const oscillator = audioContext.createOscillator();
+                        const gainNode = audioContext.createGain();
+                        
+                        oscillator.connect(gainNode);
+                        gainNode.connect(audioContext.destination);
+                        
+                        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(1000, audioContext.currentTime + 0.1);
+                        
+                        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                        
+                        oscillator.start();
+                        oscillator.stop(audioContext.currentTime + 0.1);
+                        
+                        console.log('Audio successfully activated!');
+                        
+                    } catch (error) {
+                        console.error('Failed to activate audio:', error);
+                        audioBtn.textContent = '🔇 Audio fehler';
+                        audioBtn.style.backgroundColor = '#f44336';
+                    }
+                });
+            }
+        });
+        
+        // Make audioContext available globally for the game
+        window.getAudioContext = function() {
+            return audioInitialized ? audioContext : null;
+        };
+    </script>
+
 </body>
 </html>
