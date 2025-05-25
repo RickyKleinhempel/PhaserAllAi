@@ -1,7 +1,7 @@
-# Vollständiger Prompt für Dual Ball Breakout Spiel
+# Vollständiger Prompt für Dual Ball Breakout Spiel mit Powerup-System
 
 ## Aufgabe
-Erstelle ein statisches HTML-Breakout-Spiel mit zwei Bällen auf einem 32x32 Spielfeld (1024x1024 Pixel Canvas). Das Spiel soll als eine einzige HTML-Datei implementiert werden, die CSS, JavaScript und alle Features enthält.
+Erstelle ein statisches HTML-Breakout-Spiel mit zwei Bällen auf einem 32x32 Spielfeld (1024x1024 Pixel Canvas) inklusive einem vollständigen Powerup-System mit Explosionseffekten. Das Spiel soll als eine einzige HTML-Datei implementiert werden, die CSS, JavaScript und alle Features enthält.
 
 ## Spielfeld-Spezifikationen
 - **Canvas-Größe**: 1024x1024 Pixel
@@ -30,15 +30,57 @@ Erstelle ein statisches HTML-Breakout-Spiel mit zwei Bällen auf einem 32x32 Spi
 - **Schweif-Effekt**: 16 gespeicherte Positionen mit Transparenz-Verlauf
 - **Kollisionserkennung**: Mit Wänden und Feldern gleicher Farbe
 - **Rendering**: Randfarbe kontrastiert zur Füllfarbe für bessere Sichtbarkeit
+- **Powerup-Ladungen**: Jeder Ball kann Powerup-Ladungen sammeln und speichern
+- **Visuelle Powerup-Anzeige**: Goldener Glow und Ladungsanzeige um geladene Bälle
+
+## Powerup-System
+
+### Powerup-Spawning:
+- **Goldene Stern-Powerups**: Spawnen zufällig alle 3-8 Sekunden auf dem Spielfeld
+- **Visuelle Effekte**: Pulsende Animation mit goldenem Glow und Funken-Partikeln
+- **Spawn-Logik**: Keine Doppel-Spawns auf derselben Feldposition
+- **Kontinuierliche Funken**: Dynamische Partikeleffekte um jedes Powerup
+
+### Powerup-Sammlung:
+- **Kollisionserkennung**: Bälle sammeln Powerups bei Berührung
+- **Powerup-Ladungen**: Jede Sammlung erhöht die Ladungsanzahl des Balls
+- **Audio-Feedback**: Aufsteigender Ton (600Hz → 1200Hz) bei Sammlung
+- **Sammel-Partikel**: 15 goldene Partikel explodieren bei Einsammlung
+- **Visuelle Ball-Änderung**: Geladene Bälle zeigen goldenen Glow
+
+### Explosions-Mechanik:
+- **Trigger**: Geladene Bälle lösen Explosionen bei Feldkollisionen aus
+- **Explosionsradius**: 3 Felder Radius um den Aufprallpunkt
+- **Flächenumwandlung**: Alle passenden Felder im Radius werden umgewandelt
+- **Welleneffekt**: Verzögerte Feldanimationen für visuellen Welleneffekt
+- **Ladungsverbrauch**: Eine Ladung wird pro Explosion verbraucht
+
+### Explosions-Effekte:
+- **Audio**: Dramatischer Sound mit Bass-Rumpel (80Hz → 20Hz) und Knall (300Hz → 50Hz)
+- **Partikel**: 50+ Explosionspartikel + 30+ Funkenpartikel
+- **Verzögerung**: Distanzbasierte Animation für realistischen Welleneffekt
+- **Farbübergänge**: Partikel wechseln von alter zu neuer Feldfarbe
+
+### Visuelle Powerup-Anzeigen:
+- **Ball-Glow**: Goldener Leuchteffekt um geladene Bälle
+- **Ladungsanzeige**: 1-5 Ladungen als goldene Punkte um den Ball
+- **Zahlenanzeige**: Bei >5 Ladungen wird die Zahl im Ball angezeigt
+- **Dynamische Updates**: Sofortige visuelle Rückmeldung bei Änderungen
 
 ## Visuelle Effekte
 
 ### Partikel-System:
-- **12 Partikel** pro Feldumwandlung
-- **Lebensdauer**: 60-100 Frames (zufällig)
+- **12 Partikel** pro normaler Feldumwandlung
+- **65+ Partikel** pro Powerup-Explosion (50 Explosion + 15+ Funken)
+- **15 goldene Partikel** pro Powerup-Sammlung
+- **Kontinuierliche Funken** um jedes Powerup
+- **Lebensdauer**: 60-100 Frames (zufällig) für normale, 80-160 für Explosionen
 - **Bewegung**: Radiale Explosion vom Feldmittelpunkt
 - **Größenanimation**: Erst größer werdend (30%), dann kleiner werdend (70%)
-- **Farbübergang**: RGB-Interpolation von alter zu neuer Feldfarbe
+- **Farbübergänge**: 
+  - RGB-Interpolation von alter zu neuer Feldfarbe (normale Partikel)
+  - Gold zu Orange (Powerup-Partikel)
+  - Weiß zu Gelb/Lila (Funken-Partikel)
 - **Glow-Effekt**: Zusätzlicher vergrößerter Partikel mit 30% Transparenz
 - **Geschwindigkeitsabnahme**: Realistische Bewegungsdämpfung
 
@@ -54,7 +96,12 @@ Erstelle ein statisches HTML-Breakout-Spiel mit zwei Bällen auf einem 32x32 Spi
 - **Web Audio API** für Soundgenerierung
 - **Heller Ball**: Frequenz-Sweep von 800Hz zu 400Hz (0.1s)
 - **Dunkler Ball**: Frequenz-Sweep von 400Hz zu 800Hz (0.1s)
-- **Lautstärke**: 0.3 initial, exponentieller Abfall zu 0.01
+- **Powerup-Sammlung**: Aufsteigender Ton von 600Hz zu 1200Hz (0.2s)
+- **Explosions-Sound**: 
+  - Bass-Rumpel: 80Hz → 20Hz (Sägezahn, 0.5s)
+  - Knall-Ton: 300Hz → 50Hz (Rechteck, 0.3s)
+  - Kombinierte Wiedergabe für dramatischen Effekt
+- **Lautstärke**: 0.3-0.8 initial, exponentieller Abfall
 - **Initialisierung**: Erste Benutzerinteraktion aktiviert Audio-Context
 
 ## Spielsteuerung
@@ -110,11 +157,18 @@ let lightFieldColor = '#ffffff';
 let darkFieldColor = '#000000';
 let autoColorMode = false;
 let colorAnimationTime = 0;
+let colorAnimationMode = 0; // 0-4: Verschiedene Animationsmodi
+let colorAnimationSpeed = 1.0;
 
 // Spielfeld und Effekte
 let gameField = []; // 32x32 Array
 let particles = [];
 let animatedFields = [];
+
+// Powerup-System
+let powerups = [];
+let powerupSpawnTimer = 0;
+let powerupSpawnInterval = 300; // Variable Spawn-Intervalle
 
 // Audio
 let audioContext = null;
@@ -128,7 +182,8 @@ let lightBall = {
     dx: -BALL_SPEED,
     dy: BALL_SPEED,
     type: 'light',
-    trail: []
+    trail: [],
+    powerupCharges: 0 // Powerup-Ladungen
 };
 
 let darkBall = {
@@ -137,23 +192,34 @@ let darkBall = {
     dx: BALL_SPEED,
     dy: -BALL_SPEED,
     type: 'dark',
-    trail: []
+    trail: [],
+    powerupCharges: 0 // Powerup-Ladungen
 };
 ```
 
 ### Kern-Funktionen:
 - `initGameField()`: Spielfeld initialisieren
 - `drawGameField()`: Statische Felder rendern
-- `drawBall(ball)`: Ball mit Schweif zeichnen
-- `checkFieldCollision(ball)`: Feldkollision und -umwandlung
+- `drawBall(ball)`: Ball mit Schweif und Powerup-Anzeigen zeichnen
+- `checkFieldCollision(ball)`: Feldkollision, -umwandlung und Powerup-Explosion
 - `checkWallCollision(ball)`: Wandkollisionen
-- `createConversionParticles()`: Partikeleffekte erstellen
+- `createConversionParticles()`: Normale Partikeleffekte erstellen
 - `createFieldAnimation()`: Feldanimationen starten
-- `updateAndDrawParticles()`: Partikel-System
+- `updateAndDrawParticles()`: Partikel-System mit mehreren Typen
 - `updateAndDrawAnimatedFields()`: Animierte Felder
-- `playConversionSound()`: Audio-Effekte
-- `updateAutoColors()`: Automatische Farbanimation
+- `playConversionSound()`: Audio-Effekte für normale Umwandlungen
+- `updateAutoColors()`: Automatische Farbanimation mit 5 Modi
 - `hslToHex()`: HSL zu Hex Konvertierung
+- **Powerup-Funktionen**:
+  - `spawnPowerup()`: Powerup-Spawning mit Funken-Effekt
+  - `updateAndDrawPowerups()`: Powerup-Rendering und -Animation
+  - `checkPowerupCollision(ball)`: Powerup-Kollisionserkennung
+  - `triggerPowerupExplosion(ball, x, y)`: Explosions-Mechanik
+  - `createExplosionParticles(x, y, isLightBall)`: Explosions-Partikel
+  - `createPowerupCollectParticles(x, y)`: Sammel-Partikel
+  - `playPowerupCollectSound()`: Powerup-Sammel-Audio
+  - `playExplosionSound()`: Explosions-Audio
+  - `drawStar(ctx, x, y, radius, points)`: Stern-Symbol zeichnen
 
 ## Styling-Anforderungen
 - **Moderne UI**: Sauberes, responsives Design
@@ -171,11 +237,19 @@ let darkBall = {
 
 ## Besondere Features
 1. **Typ-basierte Ball-Identifikation**: Keine farbbasierten Vergleiche
-2. **HSL-Farbanimationen**: Mathematisch saubere Farbübergänge
+2. **HSL-Farbanimationen**: Mathematisch saubere Farbübergänge mit 5 Modi
 3. **3D-Flip-Animationen**: Realistische Feldumwandlungs-Effekte
 4. **Mehrstufige Partikeleffekte**: Größen- und Transparenz-Animationen
-5. **Web Audio Synthesis**: Prozedural generierte Sounds
+5. **Web Audio Synthesis**: Prozedural generierte Sounds für alle Aktionen
 6. **Performance-optimiert**: Effiziente Render-Zyklen
+7. **Vollständiges Powerup-System**: 
+   - Dynamisches Spawning mit visuellen Effekten
+   - Explosions-Mechanik mit Flächenwirkung
+   - Strategische Gameplay-Elemente
+   - Umfangreiche Audio-visuelle Rückmeldung
+8. **Erweiterte Partikel-Engine**: Unterstützt normale, goldene, Funken- und Explosions-Partikel
+9. **Visuelle Powerup-Indikatoren**: Klare Anzeige des Ball-Status
+10. **Welleneffekt-Animationen**: Zeitversetzte Feldumwandlungen bei Explosionen
 
 ## Ziel
-Das finale Spiel soll visuell ansprechend, flüssig animiert und vollständig funktional sein. Alle Features sollen nahtlos zusammenarbeiten und eine moderne, polierte Spielerfahrung bieten. Der Code soll sauber strukturiert und gut kommentiert sein.
+Das finale Spiel soll visuell ansprechend, flüssig animiert und vollständig funktional sein mit einem ausgereiften Powerup-System, das strategische Tiefe und spektakuläre Effekte bietet. Alle Features sollen nahtlos zusammenarbeiten und eine moderne, polierte Spielerfahrung mit fesselnden Audio-visuellen Rückmeldungen bieten. Das Powerup-System fügt eine neue Gameplay-Dimension hinzu, die sowohl casual als auch strategisches Spiel ermöglicht. Der Code soll sauber strukturiert und gut kommentiert sein.
