@@ -55,12 +55,16 @@ export default class GameScene extends Phaser.Scene {
         this.input.once('pointerdown', () => {
             this.audioManager.init();
         });
-        
-        // Set up UI event listeners
+          // Set up UI event listeners
         this.setupUIListeners();
           // Initial render
         this.render();
-          console.log('GameScene created successfully');
+        
+        // Auto-start the game immediately
+        this.time.delayedCall(100, () => {
+            this.startGame();
+        });
+          console.log('GameScene created successfully - Auto-starting game');
         console.log('Light ball position:', this.lightBall.x, this.lightBall.y);
         console.log('Dark ball position:', this.darkBall.x, this.darkBall.y);
         console.log('Field counts - Light:', this.countFields(0), 'Dark:', this.countFields(1));

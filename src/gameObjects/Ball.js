@@ -132,7 +132,9 @@ export class Ball extends Phaser.GameObjects.Graphics {
         }
     }    drawSpeedIndicators() {
         // Draw speed lines to show acceleration
-        const speedLevel = Math.min(Math.floor(this.speedMultiplier), 8); // Cap at 8 indicators
+        // Use logarithmic scale for very high speeds to keep indicators manageable
+        const displaySpeed = Math.log2(this.speedMultiplier); // 1x=0, 2x=1, 4x=2, 8x=3, etc.
+        const speedLevel = Math.min(Math.floor(displaySpeed), 8); // Cap at 8 indicators (256x speed)
         
         for (let i = 0; i < speedLevel; i++) {
             const angle = (i / 8) * Math.PI * 2;
@@ -151,7 +153,7 @@ export class Ball extends Phaser.GameObjects.Graphics {
             if (this.chargeText) {
                 this.chargeText.destroy();
             }
-            this.chargeText = this.scene.add.text(this.x, this.y, `${this.speedMultiplier.toFixed(1)}x`, {
+            this.chargeText = this.scene.add.text(this.x, this.y, `${this.speedMultiplier.toFixed(0)}x`, {
                 fontSize: '10px',
                 fontFamily: 'Arial',
                 color: '#00BFFF',
@@ -165,7 +167,7 @@ export class Ball extends Phaser.GameObjects.Graphics {
             this.chargeText.destroy();
             this.chargeText = null;
         }
-    }    reset(x, y, dx, dy) {
+    }reset(x, y, dx, dy) {
         this.x = x;
         this.y = y;
         this.powerupCharges = 0;
@@ -227,17 +229,23 @@ export class Ball extends Phaser.GameObjects.Graphics {
             this.chargeText.destroy();
             this.chargeText = null;
         }
-    }
-
-    doubleSpeed() {
-        // Set speed multiplier to 2 (not cumulative, always double)
-        this.speedMultiplier = 2;
+    }    doubleSpeed() {
+        // Progressive speed multiplication - double the current speed each time
+        this.speedMultiplier *= 2;
         
-        // Set timer for 30 seconds
+        // Cap at reasonable maximum to prevent game breaking (256x should be enough!)
+        const maxSpeed = 8;
+        if (this.speedMultiplier > maxSpeed) {
+            this.speedMultiplier = maxSpeed;
+        }
+        
+        // Reset timer for 30 seconds each time
         this.speedBoostTimer = 30;
         
         // Update visual representation
         this.render();
+        
+        console.log(`Ball ${this.ballType} speed increased to ${this.speedMultiplier}x`);
     }
 
     getBounds() {
