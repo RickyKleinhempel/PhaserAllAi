@@ -51,6 +51,7 @@ Dieses Projekt wurde **vollständig automatisiert** mit AI-Assistenten entwickel
 
 ### Benutzeroberfläche
 - **Auto-Start**: Spiel startet automatisch ohne Benutzerinteraktion
+- **Audio-Button**: Orange "🔊 Audio aktivieren" Button (oben rechts) für Browser-konforme Audio-Aktivierung
 - **Versteckte Steuerung**: Alle Buttons ausgeblendet für immersive Erfahrung
 - **Vollbild-Modus**: Cross-Browser-Unterstützung mit responsivem Design
 - **Echtzeit-Anzeigen**: Live-Felderzähler und Geschwindigkeitsanzeige
@@ -136,6 +137,7 @@ Konvertiere alle Felder durch geschickte Ball-Navigation und strategische Poweru
 
 ### Steuerung
 - **Auto-Start**: Spiel startet automatisch
+- **Audio**: Orange Button (oben rechts) zum Aktivieren der Sounds
 - **Vollbild**: F11 oder Vollbild-Button (falls sichtbar)
 - **Reset**: Browser-Refresh
 
