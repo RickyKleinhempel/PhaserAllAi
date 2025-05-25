@@ -143,9 +143,34 @@
             padding: 0;
             outline: none;
         }
-        
-        .color-picker:hover {
+          .color-picker:hover {
             border-color: #4CAF50;
+        }
+        
+        .auto-color-btn {
+            background-color: #9C27B0;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .auto-color-btn:hover {
+            background-color: #7B1FA2;
+            transform: translateY(-1px);
+        }
+        
+        .auto-color-btn.active {
+            background-color: #E91E63;
+            box-shadow: 0 0 10px rgba(233, 30, 99, 0.5);
+        }
+        
+        .auto-color-btn.active:hover {
+            background-color: #C2185B;
         }
     </style>
 </head>
@@ -171,9 +196,7 @@
         <label for="speedSlider">Spielgeschwindigkeit:</label>
         <input type="range" id="speedSlider" class="speed-slider" min="0.25" max="10" step="0.25" value="2">
         <span id="speedValue">1.0x</span>
-    </div>
-
-    <div class="color-controls">
+    </div>    <div class="color-controls">
         <div class="color-control">
             <label for="lightColorPicker">Helle Felder:</label>
             <input type="color" id="lightColorPicker" class="color-picker" value="#ffffff">
@@ -181,6 +204,16 @@
         <div class="color-control">
             <label for="darkColorPicker">Dunkle Felder:</label>
             <input type="color" id="darkColorPicker" class="color-picker" value="#000000">
+        </div>        <div class="color-control">
+            <button id="autoColorBtn" class="auto-color-btn">Automatische Farben</button>
+        </div>
+        <div class="color-control">
+            <button id="colorModeBtn" class="auto-color-btn">Standard</button>
+        </div>
+        <div class="color-control">
+            <label for="colorSpeedSlider">Animation:</label>
+            <input type="range" id="colorSpeedSlider" class="speed-slider" min="0.1" max="3" step="0.1" value="1" style="width: 100px;">
+            <span id="colorSpeedValue">1.0x</span>
         </div>
     </div>
 
@@ -202,10 +235,14 @@
         let lastFrameTime = 0; // Für FPS-Kontrolle
           // Audio Context für Soundeffekte
         let audioContext = null;
-        
-        // Feldfarben
+          // Feldfarben
         let lightFieldColor = '#ffffff';
         let darkFieldColor = '#000000';
+          // Automatische Farbwechsel
+        let autoColorMode = false;
+        let colorAnimationTime = 0;
+        let colorAnimationMode = 0; // 0: Standard, 1: Wellen, 2: Puls, 3: Regenbogen, 4: Kontrast
+        let colorAnimationSpeed = 1.0;
           // Partikeleffekte
         let particles = [];
         
@@ -260,30 +297,110 @@
             
             gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
             gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-            
-            oscillator.start();
+              oscillator.start();
             oscillator.stop(audioContext.currentTime + 0.1);
         }
-          // Partikel für Feldumwandlung erstellen
+        
+        // HSL zu Hex konvertieren
+        function hslToHex(h, s, l) {
+            l /= 100;
+            const a = s * Math.min(l, 1 - l) / 100;
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+                return Math.round(255 * color).toString(16).padStart(2, '0');
+            };
+            return `#${f(0)}${f(8)}${f(4)}`;
+        }
+          // Automatische Farben updaten
+        function updateAutoColors() {
+            if (!autoColorMode) return;
+            
+            // Zeit für Farbanimation erhöhen
+            colorAnimationTime += 0.8 * colorAnimationSpeed;
+            
+            let lightHue, darkHue, lightSaturation, lightLightness, darkSaturation, darkLightness;
+            
+            switch (colorAnimationMode) {
+                case 0: // Standard - sanfte Rotation
+                    lightHue = (colorAnimationTime * 0.5) % 360;
+                    darkHue = (lightHue + 180) % 360;
+                    lightSaturation = 80;
+                    lightLightness = 75;
+                    darkSaturation = 90;
+                    darkLightness = 25;
+                    break;
+                    
+                case 1: // Wellen - oszillierende Sättigung
+                    lightHue = (colorAnimationTime * 0.3) % 360;
+                    darkHue = (lightHue + 120) % 360; // Nicht komplementär für mehr Vielfalt
+                    lightSaturation = 50 + Math.sin(colorAnimationTime * 0.1) * 40;
+                    lightLightness = 60 + Math.cos(colorAnimationTime * 0.15) * 20;
+                    darkSaturation = 70 + Math.cos(colorAnimationTime * 0.12) * 25;
+                    darkLightness = 30 + Math.sin(colorAnimationTime * 0.08) * 15;
+                    break;
+                    
+                case 2: // Puls - rhythmische Intensität
+                    const pulse = Math.sin(colorAnimationTime * 0.2);
+                    const fastPulse = Math.sin(colorAnimationTime * 0.8);
+                    lightHue = (colorAnimationTime * 0.4 + pulse * 30) % 360;
+                    darkHue = (lightHue + 90 + fastPulse * 60) % 360;
+                    lightSaturation = 60 + Math.abs(pulse) * 35;
+                    lightLightness = 50 + Math.abs(fastPulse) * 30;
+                    darkSaturation = 80 + Math.abs(pulse) * 20;
+                    darkLightness = 20 + Math.abs(fastPulse) * 25;
+                    break;
+                    
+                case 3: // Regenbogen - schnelle Farbwechsel
+                    lightHue = (colorAnimationTime * 1.5) % 360;
+                    darkHue = (colorAnimationTime * 1.2 + 240) % 360;
+                    lightSaturation = 90 + Math.sin(colorAnimationTime * 0.3) * 10;
+                    lightLightness = 70 + Math.cos(colorAnimationTime * 0.4) * 15;
+                    darkSaturation = 95;
+                    darkLightness = 30 + Math.sin(colorAnimationTime * 0.25) * 10;
+                    break;
+                    
+                case 4: // Kontrast - extreme Gegensätze
+                    const contrast = Math.sin(colorAnimationTime * 0.15);
+                    lightHue = contrast > 0 ? 45 + contrast * 60 : 200 + Math.abs(contrast) * 80;
+                    darkHue = contrast > 0 ? 220 + contrast * 40 : 20 + Math.abs(contrast) * 60;
+                    lightSaturation = 40 + Math.abs(contrast) * 55;
+                    lightLightness = 80 + contrast * 15;
+                    darkSaturation = 60 + Math.abs(contrast) * 35;
+                    darkLightness = 15 + Math.abs(contrast) * 20;
+                    break;
+            }
+            
+            // Neue Farben generieren
+            lightFieldColor = hslToHex(lightHue, lightSaturation, lightLightness);
+            darkFieldColor = hslToHex(darkHue, darkSaturation, darkLightness);
+            
+            // Color Picker aktualisieren
+            document.getElementById('lightColorPicker').value = lightFieldColor;
+            document.getElementById('darkColorPicker').value = darkFieldColor;
+        }// Partikel für Feldumwandlung erstellen
         function createConversionParticles(x, y, fromColor, toColor) {
             const centerX = x * FIELD_SIZE + FIELD_SIZE / 2;
             const centerY = y * FIELD_SIZE + FIELD_SIZE / 2;
             
-            // 8 Partikel pro Umwandlung
-            for (let i = 0; i < 8; i++) {
-                const angle = (i / 8) * Math.PI * 2;
-                const speed = 2 + Math.random() * 3;
-                  const maxLife = 30 + Math.random() * 20;
+            // 12 Partikel pro Umwandlung (mehr für besseren Effekt)
+            for (let i = 0; i < 12; i++) {
+                const angle = (i / 12) * Math.PI * 2;
+                const speed = 1.5 + Math.random() * 4; // Variablere Geschwindigkeit
+                const maxLife = 60 + Math.random() * 40; // Längere Lebensdauer (2-3x länger)
+                
                 particles.push({
-                    x: centerX,
-                    y: centerY,
+                    x: centerX + (Math.random() - 0.5) * 8, // Leichte Startposition-Variation
+                    y: centerY + (Math.random() - 0.5) * 8,
                     vx: Math.cos(angle) * speed,
                     vy: Math.sin(angle) * speed,
                     life: maxLife,
                     maxLife: maxLife,
                     fromColor: fromColor,
                     toColor: toColor,
-                    size: 2 + Math.random() * 2
+                    size: 3 + Math.random() * 4, // Größere Partikel
+                    initialSize: 3 + Math.random() * 4, // Ursprungsgröße speichern
+                    decay: 0.97 + Math.random() * 0.02 // Geschwindigkeitsabnahme
                 });
             }
         }
@@ -313,6 +430,10 @@
                 particle.y += particle.vy * gameSpeed;
                 particle.life -= gameSpeed;
                 
+                // Geschwindigkeit langsam reduzieren für natürlicheren Effekt
+                particle.vx *= particle.decay;
+                particle.vy *= particle.decay;
+                
                 // Partikel entfernen wenn abgelaufen
                 if (particle.life <= 0) {
                     particles.splice(i, 1);
@@ -321,11 +442,12 @@
                 
                 // Partikel zeichnen mit Farbübergang
                 const progress = 1 - (particle.life / particle.maxLife);
-                const alpha = Math.max(0, 1 - progress);
+                const alpha = Math.max(0, 1 - progress * 0.7); // Langsameres Ausblenden
                 
                 ctx.save();
                 ctx.globalAlpha = alpha;
-                  // Farbübergang von alter zu neuer Farbe
+                
+                // Farbübergang von alter zu neuer Farbe
                 if (particle.fromColor === 0) {
                     // Von heller zu dunkler Farbe
                     const r1 = parseInt(lightFieldColor.slice(1, 3), 16);
@@ -354,9 +476,28 @@
                     ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
                 }
                 
+                // Größe über Zeit ändern (erst größer, dann kleiner)
+                let currentSize;
+                if (progress < 0.3) {
+                    // Erste 30%: Partikel wird größer
+                    currentSize = particle.initialSize * (1 + progress * 0.8);
+                } else {
+                    // Restliche 70%: Partikel wird kleiner
+                    const shrinkProgress = (progress - 0.3) / 0.7;
+                    currentSize = particle.initialSize * (1.24 - shrinkProgress * 0.9);
+                }
+                
                 ctx.beginPath();
-                ctx.arc(particle.x, particle.y, particle.size * alpha, 0, 2 * Math.PI);
+                ctx.arc(particle.x, particle.y, currentSize * alpha, 0, 2 * Math.PI);
                 ctx.fill();
+                
+                // Zusätzlicher Glow-Effekt für mehr Auffälligkeit
+                if (progress < 0.5) {
+                    ctx.globalAlpha = alpha * 0.3;
+                    ctx.beginPath();
+                    ctx.arc(particle.x, particle.y, currentSize * 2, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
                 
                 ctx.restore();
             }
@@ -654,8 +795,10 @@
             // FPS-Kontrolle basierend auf Spielgeschwindigkeit
             // Standard: 60 FPS = 16.67ms pro Frame
             const targetFrameTime = 16.67 / gameSpeed;
-            
-            if (deltaTime >= targetFrameTime) {
+              if (deltaTime >= targetFrameTime) {
+                // Automatische Farben updaten
+                updateAutoColors();
+                
                 // Bälle bewegen (mit Geschwindigkeitsmultiplikator)
                 moveBall(lightBall, gameSpeed);
                 moveBall(darkBall, gameSpeed);
@@ -722,18 +865,57 @@
             gameSpeed = parseFloat(this.value);
             speedValue.textContent = gameSpeed.toFixed(2) + 'x';
         });
-        
-        // Farbauswähler Event Listener
+          // Farbauswähler Event Listener
         const lightColorPicker = document.getElementById('lightColorPicker');
         const darkColorPicker = document.getElementById('darkColorPicker');
         
         lightColorPicker.addEventListener('input', function() {
             lightFieldColor = this.value;
+            autoColorMode = false; // Automatik ausschalten bei manueller Farbwahl
+            updateAutoColorButton();
+        });
+          darkColorPicker.addEventListener('input', function() {
+            darkFieldColor = this.value;
+            autoColorMode = false; // Automatik ausschalten bei manueller Farbwahl
+            updateAutoColorButton();
+        });
+          // Automatische Farben Button Event Listener
+        const autoColorBtn = document.getElementById('autoColorBtn');
+        
+        autoColorBtn.addEventListener('click', function() {
+            autoColorMode = !autoColorMode;
+            updateAutoColorButton();
         });
         
-        darkColorPicker.addEventListener('input', function() {
-            darkFieldColor = this.value;
+        // Farbanimations-Modus Button
+        const colorModeBtn = document.getElementById('colorModeBtn');
+        const colorModes = ['Standard', 'Wellen', 'Puls', 'Regenbogen', 'Kontrast'];
+        
+        colorModeBtn.addEventListener('click', () => {
+            colorAnimationMode = (colorAnimationMode + 1) % colorModes.length;
+            colorModeBtn.textContent = colorModes[colorAnimationMode];
+            colorAnimationTime = 0; // Animation zurücksetzen für sofortigen Effekt
         });
+        
+        // Farbanimations-Geschwindigkeit
+        const colorSpeedSlider = document.getElementById('colorSpeedSlider');
+        const colorSpeedValue = document.getElementById('colorSpeedValue');
+        
+        colorSpeedSlider.addEventListener('input', (e) => {
+            colorAnimationSpeed = parseFloat(e.target.value);
+            colorSpeedValue.textContent = colorAnimationSpeed.toFixed(1) + 'x';
+        });
+        
+        function updateAutoColorButton() {
+            const btn = document.getElementById('autoColorBtn');
+            if (autoColorMode) {
+                btn.classList.add('active');
+                btn.textContent = 'Auto-Farben: AN';
+            } else {
+                btn.classList.remove('active');
+                btn.textContent = 'Auto-Farben: AUS';
+            }
+        }
         
         // Spiel initialisieren
         initGameField();
