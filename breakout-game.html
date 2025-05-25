@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dual Ball Breakout</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        #gameCanvas {
+            border: 2px solid #333;
+            background-color: #ddd;
+            margin: 20px 0;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        #startBtn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        #startBtn:hover {
+            background-color: #45a049;
+        }
+        
+        #pauseBtn {
+            background-color: #ff9800;
+            color: white;
+        }
+        
+        #pauseBtn:hover {
+            background-color: #e68900;
+        }
+        
+        #resetBtn {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        #resetBtn:hover {
+            background-color: #da190b;
+        }
+        
+        .score {
+            display: flex;
+            gap: 40px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .score-item {
+            text-align: center;
+        }
+        
+        .light-score {
+            color: #333;
+        }
+        
+        .dark-score {
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dual Ball Breakout</h1>
+    
+    <div class="controls">
+        <button id="startBtn">Spiel starten</button>
+        <button id="pauseBtn">Pause</button>
+        <button id="resetBtn">Reset</button>
+    </div>
+    
+    <canvas id="gameCanvas" width="512" height="512"></canvas>
+      <div class="score">
+        <div class="score-item light-score">
+            <div>Helle Felder</div>
+            <div id="lightFields">512</div>
+        </div>
+        <div class="score-item dark-score">
+            <div>Dunkle Felder</div>
+            <div id="darkFields">512</div>
+        </div>
+    </div>
+
+    <script>
+        // Canvas und Kontext
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+          // Spielkonstanten
+        const CANVAS_WIDTH = 512;
+        const CANVAS_HEIGHT = 512;
+        const FIELD_SIZE = 16; // 16x16 Pixel pro Feld
+        const FIELDS_X = 32; // 32 Felder horizontal
+        const FIELDS_Y = 32; // 32 Felder vertikal
+        const BALL_RADIUS = 3;
+        const BALL_SPEED = 2;
+        
+        // Spielzustand
+        let gameRunning = false;
+        let animationId = null;
+        
+        // Spielfeld - 0 = helles Feld, 1 = dunkles Feld
+        let gameField = [];
+        
+        // Bälle
+        let lightBall = {
+            x: CANVAS_WIDTH * 0.75, // Startet auf der dunklen Seite
+            y: CANVAS_HEIGHT / 2,
+            dx: -BALL_SPEED,
+            dy: BALL_SPEED,
+            color: '#ffffff'
+        };
+        
+        let darkBall = {
+            x: CANVAS_WIDTH * 0.25, // Startet auf der hellen Seite
+            y: CANVAS_HEIGHT / 2,
+            dx: BALL_SPEED,
+            dy: -BALL_SPEED,
+            color: '#000000'
+        };
+        
+        // Spielfeld initialisieren
+        function initGameField() {
+            gameField = [];
+            for (let y = 0; y < FIELDS_Y; y++) {
+                gameField[y] = [];
+                for (let x = 0; x < FIELDS_X; x++) {
+                    // Linke Hälfte = helle Felder (0), rechte Hälfte = dunkle Felder (1)
+                    gameField[y][x] = x < FIELDS_X / 2 ? 0 : 1;
+                }
+            }
+            updateFieldCounts();
+        }
+        
+        // Feldanzahl aktualisieren
+        function updateFieldCounts() {
+            let lightCount = 0;
+            let darkCount = 0;
+            
+            for (let y = 0; y < FIELDS_Y; y++) {
+                for (let x = 0; x < FIELDS_X; x++) {
+                    if (gameField[y][x] === 0) lightCount++;
+                    else darkCount++;
+                }
+            }
+            
+            document.getElementById('lightFields').textContent = lightCount;
+            document.getElementById('darkFields').textContent = darkCount;
+        }
+        
+        // Spielfeld zeichnen
+        function drawGameField() {
+            for (let y = 0; y < FIELDS_Y; y++) {
+                for (let x = 0; x < FIELDS_X; x++) {
+                    const fieldX = x * FIELD_SIZE;
+                    const fieldY = y * FIELD_SIZE;
+                    
+                    if (gameField[y][x] === 0) {
+                        ctx.fillStyle = '#ffffff'; // Helles Feld
+                    } else {
+                        ctx.fillStyle = '#000000'; // Dunkles Feld
+                    }
+                    
+                    ctx.fillRect(fieldX, fieldY, FIELD_SIZE, FIELD_SIZE);
+                }
+            }
+        }
+        
+        // Ball zeichnen
+        function drawBall(ball) {
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, 2 * Math.PI);
+            ctx.fillStyle = ball.color;
+            ctx.fill();
+            ctx.strokeStyle = ball.color === '#ffffff' ? '#000000' : '#ffffff';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+        
+        // Kollision mit Wänden prüfen
+        function checkWallCollision(ball) {
+            // Linke und rechte Wand
+            if (ball.x - BALL_RADIUS <= 0 || ball.x + BALL_RADIUS >= CANVAS_WIDTH) {
+                ball.dx = -ball.dx;
+                ball.x = Math.max(BALL_RADIUS, Math.min(CANVAS_WIDTH - BALL_RADIUS, ball.x));
+            }
+            
+            // Obere und untere Wand
+            if (ball.y - BALL_RADIUS <= 0 || ball.y + BALL_RADIUS >= CANVAS_HEIGHT) {
+                ball.dy = -ball.dy;
+                ball.y = Math.max(BALL_RADIUS, Math.min(CANVAS_HEIGHT - BALL_RADIUS, ball.y));
+            }
+        }        // Kollision mit Feldern prüfen
+        function checkFieldCollision(ball) {
+            const ballLeft = ball.x - BALL_RADIUS;
+            const ballRight = ball.x + BALL_RADIUS;
+            const ballTop = ball.y - BALL_RADIUS;
+            const ballBottom = ball.y + BALL_RADIUS;
+            
+            // Betroffene Felder ermitteln
+            const leftField = Math.floor(ballLeft / FIELD_SIZE);
+            const rightField = Math.floor(ballRight / FIELD_SIZE);
+            const topField = Math.floor(ballTop / FIELD_SIZE);
+            const bottomField = Math.floor(ballBottom / FIELD_SIZE);
+            
+            let collisionX = false;
+            let collisionY = false;
+            
+            for (let y = Math.max(0, topField); y <= Math.min(FIELDS_Y - 1, bottomField); y++) {
+                for (let x = Math.max(0, leftField); x <= Math.min(FIELDS_X - 1, rightField); x++) {
+                    const fieldType = gameField[y][x];
+                    const ballIsLight = ball.color === '#ffffff';
+                    
+                    // Kollisionsrichtung bestimmen
+                    const fieldCenterX = x * FIELD_SIZE + FIELD_SIZE / 2;
+                    const fieldCenterY = y * FIELD_SIZE + FIELD_SIZE / 2;
+                    
+                    const deltaX = ball.x - fieldCenterX;
+                    const deltaY = ball.y - fieldCenterY;
+                    
+                    // RICHTIGE LOGIK:
+                    // Heller Ball (weiß): wandelt helle Felder (0) in dunkle um, kann über dunkle Felder (1) fahren
+                    // Dunkler Ball (schwarz): wandelt dunkle Felder (1) in helle um, kann über helle Felder (0) fahren
+                    
+                    if (ballIsLight) {
+                        // Heller Ball
+                        if (fieldType === 0) {
+                            // Helles Feld umwandeln
+                            gameField[y][x] = 1;
+                            // Ball prallt ab
+                            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                                collisionX = true;
+                            } else {
+                                collisionY = true;
+                            }
+                        }
+                        // Bei dunklen Feldern (fieldType === 1) passiert nichts - Ball kann darüber fahren
+                    } else {
+                        // Dunkler Ball
+                        if (fieldType === 1) {
+                            // Dunkles Feld umwandeln
+                            gameField[y][x] = 0;
+                            // Ball prallt ab
+                            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                                collisionX = true;
+                            } else {
+                                collisionY = true;
+                            }
+                        }
+                        // Bei hellen Feldern (fieldType === 0) passiert nichts - Ball kann darüber fahren
+                    }
+                }
+            }
+            
+            // Ballrichtung ändern bei Kollision
+            if (collisionX) ball.dx = -ball.dx;
+            if (collisionY) ball.dy = -ball.dy;
+            
+            return collisionX || collisionY;
+        }
+        
+        // Ball bewegen
+        function moveBall(ball) {
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+            
+            // Kollisionen prüfen
+            checkWallCollision(ball);
+            if (checkFieldCollision(ball)) {
+                updateFieldCounts();
+            }
+        }
+        
+        // Spiel rendern
+        function render() {
+            // Canvas leeren
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            
+            // Spielfeld zeichnen
+            drawGameField();
+            
+            // Bälle zeichnen
+            drawBall(lightBall);
+            drawBall(darkBall);
+        }
+        
+        // Game Loop
+        function gameLoop() {
+            if (!gameRunning) return;
+            
+            // Bälle bewegen
+            moveBall(lightBall);
+            moveBall(darkBall);
+            
+            // Rendern
+            render();
+            
+            // Nächster Frame
+            animationId = requestAnimationFrame(gameLoop);
+        }
+        
+        // Spiel starten
+        function startGame() {
+            gameRunning = true;
+            gameLoop();
+        }
+        
+        // Spiel pausieren
+        function pauseGame() {
+            gameRunning = false;
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+        }
+        
+        // Spiel zurücksetzen
+        function resetGame() {
+            pauseGame();
+            
+            // Spielfeld zurücksetzen
+            initGameField();
+            
+            // Bälle zurücksetzen
+            lightBall.x = CANVAS_WIDTH * 0.75;
+            lightBall.y = CANVAS_HEIGHT / 2;
+            lightBall.dx = -BALL_SPEED;
+            lightBall.dy = BALL_SPEED;
+            
+            darkBall.x = CANVAS_WIDTH * 0.25;
+            darkBall.y = CANVAS_HEIGHT / 2;
+            darkBall.dx = BALL_SPEED;
+            darkBall.dy = -BALL_SPEED;
+            
+            // Rendern
+            render();
+        }
+        
+        // Event Listener
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('pauseBtn').addEventListener('click', pauseGame);
+        document.getElementById('resetBtn').addEventListener('click', resetGame);
+        
+        // Spiel initialisieren
+        initGameField();
+        render();
+    </script>
+</body>
+</html>
