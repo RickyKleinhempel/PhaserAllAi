@@ -2,7 +2,7 @@
 
 An advanced Breakout game with two balls, developed using **Phaser.js 3.70+** and modern web technologies. This project was created entirely automated with AI assistants.
 
-![Game Screenshot](docs/screenshot.png)
+![Game Screenshot](docs/ScreenShot.png)
 
 ## 🤖 AI Development
 
